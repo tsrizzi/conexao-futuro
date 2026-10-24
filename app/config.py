@@ -48,6 +48,16 @@ class Settings(BaseSettings):
     ollama_base_url: str = "http://localhost:11434"
     gemini_api_key: SecretStr | None = None
 
+    # RAG (seção 6.3). Modelo de embeddings local: nenhum texto sai do servidor para isso.
+    embeddings_modelo: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+    embeddings_cache_dir: str = ".cache/fastembed"
+    rag_top_k: int = 15
+    rag_peso_embeddings: float = 0.6
+    rag_peso_bm25: float = 0.4
+    rag_bonus_eixo: float = 0.1
+    # Cursos militares só são ofertados pelas Forças Armadas; ficam fora das sugestões.
+    rag_eixos_fora_da_busca: list[str] = ["Militar"]
+
     database_url: str = "sqlite:///./dev.db"
     secret_key: SecretStr | None = None
     professor_password_hash: SecretStr | None = None

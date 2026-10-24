@@ -1,0 +1,52 @@
+# Dimensões de interesse (RIASEC, como no SouTec) -> eixos do CNCT mais ligados.
+# É uma DICA para o RAG (bônus leve na busca), não uma regra. Editável.
+# Os nomes dos eixos precisam existir em data/cnct.json (há teste que confere).
+# "observacao" explica a ligação; não é usada pelo código.
+
+R:
+  nome: Técnico-Operacional
+  eixos:
+    - Controle e Processos Industriais
+    - Produção Industrial
+    - Infraestrutura
+    - Recursos Naturais
+    - Informação e Comunicação
+  observacao: "Informação e Comunicação pela parte de redes e suporte."
+
+I:
+  nome: Investigativo
+  eixos:
+    - Ambiente e Saúde
+    - Produção Industrial
+    - Produção Alimentícia
+    - Informação e Comunicação
+  observacao: "Análises clínicas e ambientais, química, alimentos, desenvolvimento de sistemas."
+
+A:
+  nome: Artístico
+  eixos:
+    - Produção Cultural e Design
+    - Informação e Comunicação
+    - Turismo, Hospitalidade e Lazer
+  observacao: "Informação e Comunicação pela parte de multimídia."
+
+S:
+  nome: Social
+  eixos:
+    - Ambiente e Saúde
+    - Desenvolvimento Educacional e Social
+    - Segurança
+
+E:
+  nome: Empreendedor
+  eixos:
+    - Gestão e Negócios
+    - Turismo, Hospitalidade e Lazer
+
+C:
+  nome: Organizacional
+  eixos:
+    - Gestão e Negócios
+    - Informação e Comunicação
+    - Segurança
+  observacao: "Informação e Comunicação pela parte de banco de dados; Segurança pelas normas."

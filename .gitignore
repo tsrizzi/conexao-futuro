@@ -26,3 +26,6 @@ data/raw/*.pdf
 .idea/
 .DS_Store
 Thumbs.db
+
+# Modelos baixados (fastembed)
+.cache/

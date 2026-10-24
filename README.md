@@ -16,6 +16,22 @@ uv run uvicorn app.main:app --reload
 Sem chave de API, dá para desenvolver com custo zero usando `LLM_PROVIDER=fake` (respostas de
 teste) ou `LLM_PROVIDER=ollama` (modelo local, ex.: `LLM_MODEL=qwen2.5:3b`).
 
+## Catálogo (CNCT) e índice de busca
+
+```bash
+# 1. PDF do CNCT -> data/cnct.json + data/cnct_relatorio.md (revise a amostra do relatório!)
+uv run --group ingest python scripts/ingest_cnct.py data/raw/<arquivo>.pdf
+#    alternativa: planilha montada à mão (colunas = campos do curso; listas separadas por ';')
+uv run python scripts/ingest_cnct.py data/raw/<planilha>.csv --edicao "5ª edição (2026)"
+
+# 2. cnct.json -> data/cnct_index.npz (baixa o modelo de embeddings na 1ª vez, ~240 MB)
+uv run python scripts/build_index.py
+```
+
+Trocar de edição do CNCT = rodar os dois comandos de novo; o app recusa índice desatualizado.
+Palavras do dia a dia que o catálogo não usa ("bolo" → "confeitaria") ficam em
+`data/expansao_consulta.yaml`, editável.
+
 ## Testes e lint
 
 ```bash
@@ -24,7 +40,8 @@ uv run ruff check . && uv run ruff format .
 uv run mypy app
 ```
 
-Os testes nunca chamam APIs reais.
+Os testes nunca chamam APIs reais. Os marcados com `modelo` usam o modelo de embeddings
+local e são pulados se ele ainda não foi baixado (`uv run pytest -m "not modelo"` pula sempre).
 
 ## Provedores de LLM
 

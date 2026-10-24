@@ -1,0 +1,105 @@
+# Expansão de consulta: palavras do dia a dia do estudante -> termos usados no CNCT.
+#
+# O catálogo fala em "confeitaria", o estudante fala em "bolo". Quando uma palavra da
+# esquerda aparece na consulta, os termos da direita são acrescentados antes da busca.
+# Comparação sem acento, sem diferença de maiúsculas e pelo radical
+# ("bolos" casa com "bolo"). Editável: acrescente o que os estudantes falarem.
+
+# Tecnologia
+computador: informática computação
+pc: informática computação
+notebook: informática computação
+celular: aplicativos dispositivos móveis
+aplicativo: aplicativos desenvolvimento de sistemas
+app: aplicativos desenvolvimento de sistemas
+site: internet desenvolvimento web
+programar: programação desenvolvimento de sistemas
+código: programação desenvolvimento de sistemas
+game: jogos digitais
+videogame: jogos digitais
+joguinho: jogos digitais
+internet: redes de computadores
+wifi: redes de computadores
+robô: robótica mecatrônica automação
+robótica: mecatrônica automação
+
+# Consertos, máquinas, obras
+consertar: manutenção reparo
+arrumar: manutenção reparo
+conserto: manutenção reparo
+carro: automotivo veículos
+moto: motocicletas veículos automotivo
+oficina: manutenção mecânica
+fábrica: indústria produção industrial
+tomada: instalações elétricas eletricidade
+fio: instalações elétricas
+luz: instalações elétricas eletricidade
+casa: edificações construção civil
+prédio: edificações construção civil
+obra: edificações construção civil
+avião: aeronáutica aeronaves
+barco: naval embarcações
+navio: naval embarcações
+
+# Comida
+bolo: confeitaria
+doce: confeitaria
+torta: confeitaria
+chocolate: confeitaria
+pão: panificação
+cozinhar: gastronomia cozinha alimentos
+comida: gastronomia alimentos
+chef: gastronomia cozinha
+
+# Arte, comunicação, moda
+desenhar: desenho design ilustração artes visuais
+desenho: design ilustração artes visuais
+foto: fotografia processos fotográficos
+vídeo: produção de áudio e vídeo multimídia
+youtube: produção de áudio e vídeo multimídia
+filmar: produção de áudio e vídeo
+editar: edição multimídia
+música: música instrumento musical canto
+cantar: canto música
+banda: música instrumento musical
+roupa: vestuário moda confecção
+costurar: costura vestuário confecção
+maquiagem: estética imagem pessoal
+cabelo: estética imagem pessoal
+unha: estética imagem pessoal
+
+# Natureza, animais
+bicho: animais
+cachorro: animais cães veterinária
+gato: animais veterinária
+planta: plantas cultivo agricultura
+horta: cultivo agricultura hortaliças
+plantar: cultivo agricultura
+
+# Pessoas, saúde, educação
+criança: crianças infância educação
+ensinar: ensino educação
+professor: ensino educação
+idoso: idosos cuidados
+vovó: idosos cuidados
+doente: pacientes saúde
+médico: saúde pacientes
+remédio: medicamentos farmácia
+academia: atividade física esporte
+esporte: esporte atividade física lazer
+
+# Negócios
+dinheiro: finanças contabilidade
+conta: finanças contabilidade
+banco: finanças serviços bancários
+loja: comércio vendas
+vender: vendas comércio
+venda: vendas comércio
+negócio: empreendedorismo gestão administração
+chefe: gestão liderança
+
+# Outros
+viajar: turismo viagens
+polícia: segurança
+bombeiro: combate a incêndio defesa civil
+experimento: experimentos laboratório análises
