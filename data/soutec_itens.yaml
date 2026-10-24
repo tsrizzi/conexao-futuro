@@ -1,0 +1,91 @@
+# Itens do teste de interesses do SouTec (MEC), transcritos dos prints do app (out/2026).
+# Escala original: 1 (interesse mínimo) a 5 (interesse máximo).
+# Os itens seguem um ciclo fixo de 6 dimensões: A, C, E, I, R, S (12 itens por dimensão).
+# A classificação por dimensão foi INFERIDA a partir desse padrão cíclico. Nomes confirmados nos
+# prints do resultado: "Técnico-Operacional" (R) e "Empreendedor" (E). Os demais nomes são nossos.
+# O item 37 não estava nos prints; pelo ciclo, é da dimensão A (Artístico).
+#
+# USO NO SISTEMA: referência para (1) o formulário curto, (2) os exemplos que o agente usa
+# para sondar cada dimensão na conversa e (3) os testes de avaliação. NÃO reproduzir o teste inteiro.
+
+dimensoes:
+  R: { nome: "Técnico-Operacional", resumo: "Atividades práticas e objetivas, com ferramentas, máquinas, tecnologia ou natureza." }
+  I: { nome: "Investigativo",       resumo: "Pesquisar, analisar, entender como as coisas funcionam, ciência." }
+  A: { nome: "Artístico",           resumo: "Criar, se expressar, arte, design, comunicação, música, escrita." }
+  S: { nome: "Social",              resumo: "Ajudar, cuidar, ensinar e orientar pessoas." }
+  E: { nome: "Empreendedor",        resumo: "Influenciar, liderar, negociar, vender, empreender." }
+  C: { nome: "Organizacional",      resumo: "Organizar informações, rotinas, números, documentos e normas." }
+
+itens:
+  - { n: 1,  dim: A, texto: "Desenhar ilustrações para livros infantis." }
+  - { n: 2,  dim: C, texto: "Executar rotinas de escritório." }
+  - { n: 3,  dim: E, texto: "Estabelecer acordos internacionais de comércio." }
+  - { n: 4,  dim: I, texto: "Conceber novas teorias científicas." }
+  - { n: 5,  dim: R, texto: "Montar sistemas elétricos/eletrônicos." }
+  - { n: 6,  dim: S, texto: "Dar assistência a pessoas necessitadas." }
+  - { n: 7,  dim: A, texto: "Cantar ou tocar instrumentos musicais." }
+  - { n: 8,  dim: C, texto: "Conferir e registrar informações detalhadas." }
+  - { n: 9,  dim: E, texto: "Gerenciar a área comercial de uma grande empresa." }
+  - { n: 10, dim: I, texto: "Realizar experimentos científicos." }
+  - { n: 11, dim: R, texto: "Operar equipamentos em uma montadora de automóveis." }
+  - { n: 12, dim: S, texto: "Orientar pessoas sobre cuidados de saúde." }
+  - { n: 13, dim: A, texto: "Escrever novelas, histórias de mistério ou ficção científica." }
+  - { n: 14, dim: C, texto: "Trabalhar em um escritório de contabilidade." }
+  - { n: 15, dim: E, texto: "Fazer negociações comerciais." }
+  - { n: 16, dim: I, texto: "Fazer pesquisas em um laboratório de biologia molecular." }
+  - { n: 17, dim: R, texto: "Construir casas e edifícios." }
+  - { n: 18, dim: S, texto: "Ajudar pessoas a restabelecer a saúde." }
+  - { n: 19, dim: A, texto: "Criar comerciais de TV." }
+  - { n: 20, dim: C, texto: "Seguir rotinas de cálculo e registro de dados numéricos." }
+  - { n: 21, dim: E, texto: "Dirigir um grupo empresarial." }
+  - { n: 22, dim: I, texto: "Investigar as características de uma galáxia desconhecida." }
+  - { n: 23, dim: R, texto: "Instalar uma rede de computadores." }
+  - { n: 24, dim: S, texto: "Acolher crianças vítimas de abandono." }
+  - { n: 25, dim: A, texto: "Criar o cenário e/ou figurino para um espetáculo de dança, teatro ou circo." }
+  - { n: 26, dim: C, texto: "Arquivar documentos ou informações." }
+  - { n: 27, dim: E, texto: "Conceber e lançar um novo empreendimento." }
+  - { n: 28, dim: I, texto: "Analisar a composição físico-química do solo." }
+  - { n: 29, dim: R, texto: "Fazer a manutenção de um sistema de ar condicionado." }
+  - { n: 30, dim: S, texto: "Ajudar pessoas com problemas socioemocionais." }
+  - { n: 31, dim: A, texto: "Decorar espaços residenciais ou comerciais." }
+  - { n: 32, dim: C, texto: "Inspecionar finanças para verificar o pagamento de impostos." }
+  - { n: 33, dim: E, texto: "Usar estratégias de marketing e vendas." }
+  - { n: 34, dim: I, texto: "Projetar inovações tecnocientíficas." }
+  - { n: 35, dim: R, texto: "Lidar com animais em uma fazenda (nutrir, reproduzir, etc.)." }
+  - { n: 36, dim: S, texto: "Atuar na prevenção ao suicídio." }
+  - { n: 37, dim: A, texto: null }   # print ausente
+  - { n: 38, dim: C, texto: "Usar planilhas para organizar informações." }
+  - { n: 39, dim: E, texto: "Liderar uma equipe de vendas." }
+  - { n: 40, dim: I, texto: "Mapear o código genético de um microorganismo." }
+  - { n: 41, dim: R, texto: "Construir um sistema de irrigação para agricultura." }
+  - { n: 42, dim: S, texto: "Auxiliar pessoas com deficiências." }
+  - { n: 43, dim: A, texto: "Criar personagens para uma história em quadrinhos." }
+  - { n: 44, dim: C, texto: "Identificar erros em textos e documentos." }
+  - { n: 45, dim: E, texto: "Decidir sobre uma estratégia de investimentos." }
+  - { n: 46, dim: I, texto: "Estudar formas de vida nas áreas mais profundas dos oceanos." }
+  - { n: 47, dim: R, texto: "Operar sondas de perfuração para extração de petróleo." }
+  - { n: 48, dim: S, texto: "Conduzir o tratamento de pacientes psiquiátricos." }
+  - { n: 49, dim: A, texto: "Dirigir um espetáculo de teatro, dança ou circo." }
+  - { n: 50, dim: C, texto: "Revisar e atualizar bancos de dados." }
+  - { n: 51, dim: E, texto: "Atrair investidores para um projeto empresarial." }
+  - { n: 52, dim: I, texto: "Fazer análises químicas." }
+  - { n: 53, dim: R, texto: "Fazer manutenção e conserto de veículos (automóveis, aviões, embarcações)." }
+  - { n: 54, dim: S, texto: "Cuidar de pacientes internados em um hospital." }
+  - { n: 55, dim: A, texto: "Reger uma orquestra ou coral." }
+  - { n: 56, dim: C, texto: "Verificar o cumprimento de normas e regulamentos." }
+  - { n: 57, dim: E, texto: "Vender produtos e/ou serviços." }
+  - { n: 58, dim: I, texto: "Pesquisar e desenvolver novos produtos bioquímicos." }
+  - { n: 59, dim: R, texto: "Usar máquinas e ferramentas em uma linha de produção industrial." }
+  - { n: 60, dim: S, texto: "Orientar pais e mães sobre a saúde dos seus filhos." }
+  - { n: 61, dim: A, texto: "Apresentar-se em espetáculos de arte ou entretenimento." }
+  - { n: 62, dim: C, texto: "Redigir documentos oficiais (atas, contratos, ofícios, etc.)." }
+  - { n: 63, dim: E, texto: "Persuadir consumidores a comprar." }
+  - { n: 64, dim: I, texto: "Pesquisar as aplicações da energia nuclear." }
+  - { n: 65, dim: R, texto: "Conduzir veículos de transporte de passageiros ou carga." }
+  - { n: 66, dim: S, texto: "Orientar jovens indecisos sobre a escolha da profissão." }
+  - { n: 67, dim: A, texto: "Criar a arte visual de capas de revista." }
+  - { n: 68, dim: C, texto: "Conferir registros de transações bancárias (débitos, créditos, etc.)." }
+  - { n: 69, dim: E, texto: "Elaborar a estratégia competitiva de uma empresa." }
+  - { n: 70, dim: I, texto: "Desenvolver sistemas de inteligência artificial." }
+  - { n: 71, dim: R, texto: "Usar equipamentos e dispositivos eletromecânicos." }
+  - { n: 72, dim: S, texto: "Ensinar crianças a ler e escrever." }
