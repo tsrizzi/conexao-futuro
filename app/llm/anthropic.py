@@ -15,6 +15,7 @@ from anthropic.types import (
 )
 
 from app.llm.base import (
+    Blocos,
     LLMErro,
     LLMProvider,
     LLMRespostaInvalida,
@@ -28,10 +29,16 @@ NOME_FERRAMENTA = "registrar_resultado"
 ESCOLHA_FERRAMENTA: ToolChoiceToolParam = {"type": "tool", "name": NOME_FERRAMENTA}
 
 
-def _sistema_com_cache(system: str) -> list[TextBlockParam]:
-    # O prompt do sistema é estável: marcar para prompt caching reduz custo e latência.
+def _sistema_com_cache(system: Blocos) -> list[TextBlockParam]:
+    # O 1º bloco é o prompt fixo: marcá-lo para prompt caching reduz custo e latência.
+    # Os blocos seguintes (instruções da etapa) mudam e ficam depois do ponto de cache.
     # (Abaixo do mínimo de tokens do modelo o cache simplesmente não é criado, sem erro.)
-    return [{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}]
+    primeiro, *resto = system
+    saida: list[TextBlockParam] = [
+        {"type": "text", "text": primeiro, "cache_control": {"type": "ephemeral"}}
+    ]
+    saida += [{"type": "text", "text": bloco} for bloco in resto]
+    return saida
 
 
 def _mensagens(mensagens: Sequence[Mensagem]) -> list[MessageParam]:
@@ -79,7 +86,7 @@ class AnthropicProvider(LLMProvider):
         )
 
     async def _complete(
-        self, system: str, mensagens: Sequence[Mensagem], max_tokens: int
+        self, system: Blocos, mensagens: Sequence[Mensagem], max_tokens: int
     ) -> RespostaLLM:
         try:
             resposta = await self._cliente.messages.create(
@@ -94,7 +101,7 @@ class AnthropicProvider(LLMProvider):
         return RespostaLLM(texto=texto, uso=_uso(resposta.usage))
 
     async def _stream(
-        self, system: str, mensagens: Sequence[Mensagem], max_tokens: int, uso: Uso
+        self, system: Blocos, mensagens: Sequence[Mensagem], max_tokens: int, uso: Uso
     ) -> AsyncIterator[str]:
         try:
             async with self._cliente.messages.stream(
@@ -112,7 +119,7 @@ class AnthropicProvider(LLMProvider):
 
     async def _extract(
         self,
-        system: str,
+        system: Blocos,
         mensagens: Sequence[Mensagem],
         json_schema: dict[str, Any],
         nome_schema: str,

@@ -13,15 +13,23 @@ import httpx2
 
 from app.config import MENSAGEM_GEMINI_BLOQUEADO, AppEnv, GeminiBloqueadoEmProducao
 from app.llm._http import erro_de_rede, verificar_status
-from app.llm.base import LLMProvider, LLMRespostaInvalida, Mensagem, RespostaLLM, Uso
+from app.llm.base import (
+    Blocos,
+    LLMProvider,
+    LLMRespostaInvalida,
+    Mensagem,
+    RespostaLLM,
+    Uso,
+    juntar_blocos,
+)
 
 PROVEDOR = "gemini"
 BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
 
 
-def _corpo(system: str, mensagens: Sequence[Mensagem], max_tokens: int) -> dict[str, Any]:
+def _corpo(system: Blocos, mensagens: Sequence[Mensagem], max_tokens: int) -> dict[str, Any]:
     return {
-        "systemInstruction": {"parts": [{"text": system}]},
+        "systemInstruction": {"parts": [{"text": juntar_blocos(system)}]},
         "contents": [
             {"role": "model" if m.papel == "assistant" else "user", "parts": [{"text": m.conteudo}]}
             for m in mensagens
@@ -76,13 +84,13 @@ class GeminiProvider(LLMProvider):
         return dados
 
     async def _complete(
-        self, system: str, mensagens: Sequence[Mensagem], max_tokens: int
+        self, system: Blocos, mensagens: Sequence[Mensagem], max_tokens: int
     ) -> RespostaLLM:
         dados = await self._post("generateContent", _corpo(system, mensagens, max_tokens))
         return RespostaLLM(texto=_texto(dados), uso=_uso(dados))
 
     async def _stream(
-        self, system: str, mensagens: Sequence[Mensagem], max_tokens: int, uso: Uso
+        self, system: Blocos, mensagens: Sequence[Mensagem], max_tokens: int, uso: Uso
     ) -> AsyncIterator[str]:
         url = f"/models/{self.modelo}:streamGenerateContent"
         corpo = _corpo(system, mensagens, max_tokens)
@@ -107,7 +115,7 @@ class GeminiProvider(LLMProvider):
 
     async def _extract(
         self,
-        system: str,
+        system: Blocos,
         mensagens: Sequence[Mensagem],
         json_schema: dict[str, Any],
         nome_schema: str,

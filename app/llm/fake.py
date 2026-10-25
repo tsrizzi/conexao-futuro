@@ -5,7 +5,16 @@ from collections.abc import AsyncIterator, Iterable, Sequence
 from dataclasses import dataclass
 from typing import Any
 
-from app.llm.base import LLMErro, LLMProvider, LLMSobrecarregado, Mensagem, RespostaLLM, Uso
+from app.llm.base import (
+    Blocos,
+    LLMErro,
+    LLMProvider,
+    LLMSobrecarregado,
+    Mensagem,
+    RespostaLLM,
+    Uso,
+    juntar_blocos,
+)
 
 RESPOSTA_PADRAO = "Oi! Eu sou uma inteligência artificial (resposta de teste)."
 
@@ -37,8 +46,8 @@ class FakeProvider(LLMProvider):
         self._falhas = falhas_transitorias
         self.chamadas: list[ChamadaFake] = []
 
-    def _registrar(self, tipo: str, system: str, mensagens: Sequence[Mensagem]) -> None:
-        self.chamadas.append(ChamadaFake(tipo, system, tuple(mensagens)))
+    def _registrar(self, tipo: str, system: Blocos, mensagens: Sequence[Mensagem]) -> None:
+        self.chamadas.append(ChamadaFake(tipo, juntar_blocos(system), tuple(mensagens)))
         if self._falhas > 0:
             self._falhas -= 1
             raise LLMSobrecarregado("falha transitória simulada")
@@ -51,14 +60,14 @@ class FakeProvider(LLMProvider):
         return Uso(input_tokens=10, output_tokens=len(texto.split()))
 
     async def _complete(
-        self, system: str, mensagens: Sequence[Mensagem], max_tokens: int
+        self, system: Blocos, mensagens: Sequence[Mensagem], max_tokens: int
     ) -> RespostaLLM:
         self._registrar("complete", system, mensagens)
         texto = self._proxima_resposta()
         return RespostaLLM(texto=texto, uso=self._uso(texto))
 
     async def _stream(
-        self, system: str, mensagens: Sequence[Mensagem], max_tokens: int, uso: Uso
+        self, system: Blocos, mensagens: Sequence[Mensagem], max_tokens: int, uso: Uso
     ) -> AsyncIterator[str]:
         self._registrar("stream", system, mensagens)
         texto = self._proxima_resposta()
@@ -69,7 +78,7 @@ class FakeProvider(LLMProvider):
 
     async def _extract(
         self,
-        system: str,
+        system: Blocos,
         mensagens: Sequence[Mensagem],
         json_schema: dict[str, Any],
         nome_schema: str,

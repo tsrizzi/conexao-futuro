@@ -19,6 +19,19 @@ MENSAGEM_SOBRECARGA = "muita gente conversando agora, tenta de novo em alguns se
 
 Papel = Literal["user", "assistant"]
 
+# O prompt do sistema pode vir em blocos: o 1º é o fixo (vai para o cache de prompt) e os
+# seguintes mudam a cada etapa. Os adaptadores sem cache simplesmente juntam os blocos.
+Sistema = str | Sequence[str]
+Blocos = tuple[str, ...]
+
+
+def blocos(system: Sistema) -> Blocos:
+    return (system,) if isinstance(system, str) else tuple(b for b in system if b)
+
+
+def juntar_blocos(system: Blocos) -> str:
+    return "\n\n".join(system)
+
 
 @dataclass(frozen=True)
 class Mensagem:
@@ -108,16 +121,18 @@ class LLMProvider(ABC):
     # ---- API pública -------------------------------------------------------------------
 
     async def complete(
-        self, system: str, mensagens: Sequence[Mensagem], *, max_tokens: int | None = None
+        self, system: Sistema, mensagens: Sequence[Mensagem], *, max_tokens: int | None = None
     ) -> RespostaLLM:
         limite = max_tokens or self.max_tokens
         async with self._semaforo:
-            return await self._com_retry(lambda: self._complete(system, mensagens, limite))
+            sistema = blocos(system)
+            return await self._com_retry(lambda: self._complete(sistema, mensagens, limite))
 
     def stream(
-        self, system: str, mensagens: Sequence[Mensagem], *, max_tokens: int | None = None
+        self, system: Sistema, mensagens: Sequence[Mensagem], *, max_tokens: int | None = None
     ) -> StreamLLM:
         limite = max_tokens or self.max_tokens
+        sistema = blocos(system)
 
         async def gerar(uso: Uso) -> AsyncIterator[str]:
             async with self._semaforo:
@@ -125,7 +140,7 @@ class LLMProvider(ABC):
                 while True:
                     emitiu = False
                     try:
-                        async for pedaco in self._stream(system, mensagens, limite, uso):
+                        async for pedaco in self._stream(sistema, mensagens, limite, uso):
                             emitiu = True
                             yield pedaco
                         return
@@ -140,7 +155,7 @@ class LLMProvider(ABC):
 
     async def extract[T: BaseModel](
         self,
-        system: str,
+        system: Sistema,
         mensagens: Sequence[Mensagem],
         schema: type[T],
         *,
@@ -148,9 +163,10 @@ class LLMProvider(ABC):
     ) -> RespostaEstruturada[T]:
         limite = max_tokens or self.max_tokens
         json_schema = schema.model_json_schema()
+        sistema = blocos(system)
         async with self._semaforo:
             bruto, uso = await self._com_retry(
-                lambda: self._extract(system, mensagens, json_schema, schema.__name__, limite)
+                lambda: self._extract(sistema, mensagens, json_schema, schema.__name__, limite)
             )
         try:
             return RespostaEstruturada(dados=schema.model_validate(bruto), uso=uso)
@@ -164,19 +180,19 @@ class LLMProvider(ABC):
 
     @abstractmethod
     async def _complete(
-        self, system: str, mensagens: Sequence[Mensagem], max_tokens: int
+        self, system: Blocos, mensagens: Sequence[Mensagem], max_tokens: int
     ) -> RespostaLLM: ...
 
     @abstractmethod
     def _stream(
-        self, system: str, mensagens: Sequence[Mensagem], max_tokens: int, uso: Uso
+        self, system: Blocos, mensagens: Sequence[Mensagem], max_tokens: int, uso: Uso
     ) -> AsyncIterator[str]:
         """Gera os pedaços de texto e preenche `uso` ao final."""
 
     @abstractmethod
     async def _extract(
         self,
-        system: str,
+        system: Blocos,
         mensagens: Sequence[Mensagem],
         json_schema: dict[str, Any],
         nome_schema: str,

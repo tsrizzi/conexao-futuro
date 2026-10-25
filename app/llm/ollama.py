@@ -7,17 +7,25 @@ from typing import Any
 import httpx2
 
 from app.llm._http import erro_de_rede, verificar_status
-from app.llm.base import LLMProvider, LLMRespostaInvalida, Mensagem, RespostaLLM, Uso
+from app.llm.base import (
+    Blocos,
+    LLMProvider,
+    LLMRespostaInvalida,
+    Mensagem,
+    RespostaLLM,
+    Uso,
+    juntar_blocos,
+)
 
 PROVEDOR = "ollama"
 
 
 def _corpo(
-    modelo: str, system: str, mensagens: Sequence[Mensagem], max_tokens: int, stream: bool
+    modelo: str, system: Blocos, mensagens: Sequence[Mensagem], max_tokens: int, stream: bool
 ) -> dict[str, Any]:
     return {
         "model": modelo,
-        "messages": [{"role": "system", "content": system}]
+        "messages": [{"role": "system", "content": juntar_blocos(system)}]
         + [{"role": m.papel, "content": m.conteudo} for m in mensagens],
         "stream": stream,
         "options": {"num_predict": max_tokens},
@@ -55,13 +63,13 @@ class OllamaProvider(LLMProvider):
         return dados
 
     async def _complete(
-        self, system: str, mensagens: Sequence[Mensagem], max_tokens: int
+        self, system: Blocos, mensagens: Sequence[Mensagem], max_tokens: int
     ) -> RespostaLLM:
         dados = await self._post(_corpo(self.modelo, system, mensagens, max_tokens, False))
         return RespostaLLM(texto=dados.get("message", {}).get("content", ""), uso=_uso(dados))
 
     async def _stream(
-        self, system: str, mensagens: Sequence[Mensagem], max_tokens: int, uso: Uso
+        self, system: Blocos, mensagens: Sequence[Mensagem], max_tokens: int, uso: Uso
     ) -> AsyncIterator[str]:
         corpo = _corpo(self.modelo, system, mensagens, max_tokens, True)
         try:
@@ -83,7 +91,7 @@ class OllamaProvider(LLMProvider):
 
     async def _extract(
         self,
-        system: str,
+        system: Blocos,
         mensagens: Sequence[Mensagem],
         json_schema: dict[str, Any],
         nome_schema: str,

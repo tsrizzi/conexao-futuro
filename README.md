@@ -32,6 +32,19 @@ Trocar de edição do CNCT = rodar os dois comandos de novo; o app recusa índic
 Palavras do dia a dia que o catálogo não usa ("bolo" → "confeitaria") ficam em
 `data/expansao_consulta.yaml`, editável.
 
+## Conversar com o agente pelo terminal
+
+```bash
+uv run python scripts/conversar.py            # usa o provedor do .env
+uv run python scripts/conversar.py --roteiro  # conversa automática com falas prontas
+```
+
+Comandos: `/perfil`, `/custo`, `/sair`. Só para testes com adultos. Nada é gravado.
+
+Prompts e mensagens fixas do agente ficam em `app/agent/prompts/*.md` (editáveis, sem mexer
+no código). Os arquivos `msg_*.md` são textos mostrados como estão (boas-vindas, acolhimento
+com o CVV 188 etc.); os demais são instruções para o LLM.
+
 ## Testes e lint
 
 ```bash
