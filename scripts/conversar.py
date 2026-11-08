@@ -18,6 +18,7 @@ sys.path.insert(0, str(RAIZ))
 
 from app.agent.factory import criar_orquestrador  # noqa: E402
 from app.agent.orchestrator import (  # noqa: E402
+    Estado,
     Evento,
     EventoAviso,
     EventoErro,
@@ -34,17 +35,25 @@ from app.config import get_settings  # noqa: E402
 # US$ por milhão de tokens (entrada, saída), para estimar o custo da conversa.
 PRECOS = {"claude-haiku-4-5": (1.0, 5.0), "claude-sonnet-5": (2.0, 10.0)}
 
+# Estudante fictício. As falas cobrem as 6 dimensões; o roteiro confirma o perfil quando o
+# agente pede e faz uma pergunta depois das sugestões.
 ROTEIRO = [
-    "oi",
     "jogo videogame e às vezes desenho uns personagens",
     "gosto de artes e de matemática, mas odeio química",
+    "o que faz um técnico em design gráfico?",
     "no grupo eu sempre faço os slides e a parte visual",
+    "já montei um PC com meu primo, curti mexer nas peças",
+    "ajudar os outros é legal, mas não me vejo cuidando de gente doente",
+    "vender não é comigo, fico com vergonha",
+    "organizar planilha até que eu curto",
     "acho importante ser algo criativo e que dê pra trabalhar logo",
     "tenho que estudar perto de casa, não tenho como ir longe",
     "prefiro ficar no computador do que com muita gente",
-    "isso mesmo",
-    "o que faz um técnico em design gráfico?",
+    "sei lá",
+    "pode ser",
 ]
+CONFIRMACAO = "isso mesmo"
+PERGUNTA_FINAL = "quanto tempo dura a primeira trilha e o que esse técnico faz?"
 
 
 def mostrar_recomendacao(rec: Recomendacao) -> None:
@@ -117,9 +126,16 @@ async def main() -> int:
         mostrar(evento)
 
     falas = iter(ROTEIRO) if args.roteiro else None
+    perguntou = False
     while True:
         if falas is not None:
-            fala = next(falas, "/sair")
+            if sessao.estado == Estado.CONFIRMA_PERFIL:
+                fala = CONFIRMACAO
+            elif sessao.recomendacao is not None:
+                fala = "/sair" if perguntou else PERGUNTA_FINAL
+                perguntou = True
+            else:
+                fala = next(falas, "/sair")
             print(f"\n\nVocê: {fala}")
         else:
             try:

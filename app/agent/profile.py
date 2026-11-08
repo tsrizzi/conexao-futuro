@@ -127,12 +127,16 @@ class Perfil(BaseModel):
         sem_sinal = [c for c in CODIGOS if not self.dimensoes.get(c).coberta]
         return sem_sinal[0] if sem_sinal else None
 
-    def lacunas(self) -> list[str]:
+    def _lacunas_de_dimensao(self) -> list[tuple[str, str]]:
         nomes = nomes_dimensoes()
+        return [
+            (c, f"interesse na dimensão {nomes[c]['nome']} ({nomes[c]['resumo']})")
+            for c in CODIGOS
+            if not self.dimensoes.get(c).coberta
+        ]
+
+    def _outras_lacunas(self) -> list[str]:
         faltam = []
-        for c in CODIGOS:
-            if not self.dimensoes.get(c).coberta:
-                faltam.append(f"interesse na dimensão {nomes[c]['nome']} ({nomes[c]['resumo']})")
         if not (self.materias_favoritas or self.materias_dificeis):
             faltam.append("matérias da escola de que gosta e de que não gosta")
         if not self.valores_trabalho:
@@ -140,6 +144,24 @@ class Perfil(BaseModel):
         if not self.restricoes:
             faltam.append("restrições (ex.: precisa ser perto, quer trabalhar logo) ou se não há")
         return faltam
+
+    def lacunas(self) -> list[str]:
+        return [texto for _, texto in self._lacunas_de_dimensao()] + self._outras_lacunas()
+
+    def proximo_foco(self, rodada: int) -> tuple[str, str | None]:
+        """O que a próxima pergunta deve sondar: (descrição, código da dimensão ou None).
+
+        Alterna entre dimensões sem sinal e os outros itens (matérias, valores, restrições),
+        para a conversa não ficar presa no que o estudante já contou.
+        """
+        dimensoes = self._lacunas_de_dimensao()
+        outras = self._outras_lacunas()
+        if outras and (rodada % 2 == 0 or not dimensoes):
+            return outras[0], None
+        if dimensoes:
+            codigo, texto = dimensoes[rodada // 2 % len(dimensoes)]
+            return texto, codigo
+        return "aprofundar o que o estudante já contou, pedindo um exemplo concreto", None
 
     def consulta_busca(self) -> str:
         """Consulta para o RAG (seção 6.3.1): interesses, atividades, valores e evidências."""

@@ -151,3 +151,19 @@ def test_arquivo_de_ofertas_versionado_e_valido() -> None:
     ofertas = Ofertas.carregar({c.id for c in catalogo.cursos})
     total = sum(len(v) for v in ofertas._por_curso.values())
     assert total == len(brutas), "há ofertas inválidas ou de cursos fora do catálogo"
+
+
+def test_proximo_foco_alterna_dimensoes_e_outros_itens() -> None:
+    perfil = Perfil()
+    perfil.dimensoes.A.evidencias = ["desenha personagens"]
+    focos = [perfil.proximo_foco(rodada) for rodada in range(4)]
+    assert focos[0] == ("matérias da escola de que gosta e de que não gosta", None)
+    assert focos[1][1] == "R"  # 1ª dimensão sem sinal
+    assert focos[3][1] == "I"  # muda de dimensão, não insiste na mesma
+    assert all(codigo != "A" for _, codigo in focos)  # A já tem evidência
+
+    for codigo in "RIASEC":
+        perfil.dimensoes.get(codigo).evidencias = ["x"]
+    perfil.materias_favoritas, perfil.valores_trabalho, perfil.restricoes = ["a"], ["b"], ["c"]
+    assert perfil.proximo_foco(0)[1] is None
+    assert "aprofundar" in perfil.proximo_foco(0)[0]

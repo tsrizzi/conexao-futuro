@@ -339,3 +339,31 @@ def test_marcador_incompleto_e_descartado() -> None:
     separador = SeparadorOpcoes()
     assert separador.alimentar("Texto [[opcoes: a | b") == "Texto "
     assert separador.finalizar() == ""
+
+
+async def test_pergunta_sobre_curso_na_descoberta_usa_a_ficha(catalogo: Catalogo) -> None:
+    llm = FakeProvider(
+        respostas=["Segundo a ficha, cria peças visuais. E você, curte isso?"],
+        estruturados=[analise({"pergunta_sobre_curso": True}, interesses=["desenhar"])],
+    )
+    orq = orquestrador(catalogo, llm)
+    sessao = Sessao(estado=Estado.DESCOBERTA, trocas_descoberta=2)
+
+    await coletar(orq.responder(sessao, "o que faz um técnico em design gráfico?"))
+
+    assert "curso_id: tecnico-em-design-grafico" in llm.chamadas[-1].system
+    assert "SOMENTE com o que está nas fichas" in llm.chamadas[-1].system
+    assert sessao.estado == Estado.DESCOBERTA  # continua conhecendo o estudante
+    assert sessao.trocas_descoberta == 2
+    assert sessao.perfil.interesses == ["desenhar"]
+
+
+async def test_descoberta_manda_um_foco_e_exemplos_do_soutec(catalogo: Catalogo) -> None:
+    llm = FakeProvider(respostas=["Pergunta?"], estruturados=[analise(interesses=["games"])])
+    orq = orquestrador(catalogo, llm)
+    sessao = Sessao(estado=Estado.DESCOBERTA)
+    await coletar(orq.responder(sessao, "jogo videogame"))
+    system = llm.chamadas[-1].system
+    assert "Foco da próxima pergunta" in system
+    assert "Técnico-Operacional" in system  # trocas=1 -> foco numa dimensão sem sinal
+    assert "teste SouTec" in system

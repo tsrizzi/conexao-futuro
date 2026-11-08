@@ -13,6 +13,7 @@ Para cada mensagem do estudante:
 A sessão vive só na memória do processo. Nada do texto da conversa é gravado.
 """
 
+import asyncio
 import logging
 import re
 from collections.abc import AsyncIterator, Iterable
@@ -40,7 +41,7 @@ from app.llm.base import (
     Uso,
 )
 from app.rag.catalog import Catalogo, Curso
-from app.safety.crisis import detectar_crise
+from app.safety.crisis import detectar_crise, normalizar
 from app.safety.limites import MAX_CARACTERES
 from app.safety.moderation import FiltroSaida, entrada_impropria
 from app.safety.pii import descrever_tipos, mascarar
@@ -85,6 +86,7 @@ class Sinais(BaseModel):
     quer_refazer: bool = False
     quer_mais_sugestoes: bool = False
     quer_voltar_orientacao: bool = False
+    pergunta_sobre_curso: bool = False
     fora_do_escopo: bool = False
 
 
@@ -301,6 +303,17 @@ class Orquestrador:
             self._atualizar_perfil(sessao, analise.perfil)
             yield EventoProgresso(sessao.perfil.cobertura)
 
+        perguntou_de_curso = sinais.pergunta_sobre_curso and not (
+            sinais.quer_sugestoes or sinais.quer_mais_sugestoes or sinais.quer_refazer
+        )
+        if perguntou_de_curso and sessao.estado in (Estado.DESCOBERTA, Estado.CONFIRMA_PERFIL):
+            # Dúvida sobre curso antes da hora: responde com as fichas do CNCT (nunca de
+            # memória) e continua na mesma etapa.
+            instrucoes = await self._instrucoes_explora(sessao, texto)
+            async for evento in self._responder_llm(sessao, instrucoes):
+                yield evento
+            return
+
         match sessao.estado:
             case Estado.DESCOBERTA:
                 fluxo = self._descoberta(sessao, sinais)
@@ -512,34 +525,48 @@ class Orquestrador:
 
     def _instrucoes_descoberta(self, sessao: Sessao) -> str:
         perfil = sessao.perfil
+        foco, codigo = perfil.proximo_foco(sessao.trocas_descoberta)
         exemplos = ""
-        codigo = perfil.dimensao_menos_conhecida()
-        if codigo and sessao.trocas_descoberta >= 2:
+        if codigo:
             nome = nomes_dimensoes()[codigo]["nome"]
             itens = "; ".join(exemplos_soutec(codigo, semente=sessao.trocas_descoberta))
             exemplos = (
-                f"Ainda não há sinal da dimensão {nome}. Se fizer sentido agora, use 2 ou 3 "
-                f"destas atividades como exemplos concretos, reescritas em linguagem jovem e "
-                f"oferecidas como opções: {itens}. Nunca aplique um questionário."
+                f"Atividades da dimensão {nome} (do teste SouTec) para usar como exemplos "
+                f"concretos ou como botões, reescritas em linguagem jovem: {itens}. "
+                f"Nunca aplique um questionário."
             )
         return carregar(
             "estado_descoberta",
-            lacunas=self._lista(perfil.lacunas()[:4]) or "- quase nada; aprofunde o que já sabe",
+            foco=foco,
             exemplos_soutec=exemplos,
+            lacunas=self._lista(perfil.lacunas()) or "- quase nada; aprofunde o que já sabe",
+            perfil=perfil.para_prompt(),
         )
 
     def _instrucoes_confirma(self, sessao: Sessao) -> str:
         return carregar("estado_confirma", perfil=sessao.perfil.para_prompt())
 
-    async def _instrucoes_explora(self, sessao: Sessao, texto: str) -> str:
-        import asyncio
+    def _cursos_citados(self, texto: str) -> list[Curso]:
+        """Cursos citados pelo nome ("o que faz um técnico em design gráfico?")."""
+        normal = normalizar(texto)
+        citados = [
+            c
+            for c in self._catalogo.cursos
+            if (nucleo := normalizar(re.sub(r"^Técnico (em )?", "", c.nome)))
+            and re.search(rf"\b{re.escape(nucleo)}\b", normal)  # "canto" não casa "encanto"
+        ]
+        # "Design Gráfico" contém "Design": fica com os nomes mais específicos primeiro.
+        return sorted(citados, key=lambda c: -len(c.nome))[:2]
 
+    async def _instrucoes_explora(self, sessao: Sessao, texto: str) -> str:
         sugeridos: list[Curso] = [
             c for cid in sessao.sugeridos if (c := self._catalogo.get(cid)) is not None
         ]
+        citados = self._cursos_citados(texto)
         resultados = await asyncio.to_thread(self._buscador.buscar, texto, k=3)
-        extras = [r.curso for r in resultados if r.curso.id not in sessao.sugeridos]
-        fichas = "\n\n".join(ficha_para_llm(c) for c in [*sugeridos[-3:], *extras])
+        candidatos = [*citados, *sugeridos[-3:], *(r.curso for r in resultados)]
+        unicos = list({c.id: c for c in candidatos}.values())[:6]
+        fichas = "\n\n".join(ficha_para_llm(c) for c in unicos)
         return carregar(
             "estado_explora",
             sugeridos=", ".join(c.nome for c in sugeridos) or "nenhuma",
