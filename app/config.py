@@ -37,10 +37,12 @@ class Settings(BaseSettings):
 
     llm_provider: LLMProviderName = LLMProviderName.ANTHROPIC
     llm_model: str = "claude-haiku-4-5"
+    # Usado quando o principal segue sobrecarregado depois das novas tentativas (vazio = sem).
+    llm_model_reserva: str | None = None
     llm_max_tokens: int = 1024
     llm_max_concurrency: int = 8
     llm_max_retries: int = 3
-    llm_timeout_s: float = 60.0
+    llm_timeout_s: float = 30.0  # por tentativa; se travar, vai ao modelo reserva
 
     anthropic_api_key: SecretStr | None = None
     openai_compat_base_url: str | None = None

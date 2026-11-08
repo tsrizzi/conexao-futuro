@@ -17,6 +17,7 @@ from anthropic.types import (
 from app.llm.base import (
     Blocos,
     LLMErro,
+    LLMIndisponivel,
     LLMProvider,
     LLMRespostaInvalida,
     LLMSobrecarregado,
@@ -61,6 +62,8 @@ def _uso(usage: Any) -> Uso:
 
 
 def _traduzir_erro(erro: Exception) -> LLMErro:
+    if isinstance(erro, anthropic.APITimeoutError):
+        return LLMIndisponivel(erro)  # travou: não repete no mesmo modelo, vai ao reserva
     if isinstance(erro, anthropic.RateLimitError | anthropic.APIConnectionError):
         return LLMSobrecarregado(str(erro))
     if isinstance(erro, anthropic.APIStatusError) and erro.status_code >= 500:

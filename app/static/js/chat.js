@@ -77,10 +77,21 @@
     if (p) mostrarProgresso(p.progresso);
   }
 
+  const textoPensando = pensando.querySelector("span:last-child");
+  let avisoDemora = null;
+
   function ocupar(sim) {
     ocupado = sim;
     botao.disabled = sim;
     pensando.hidden = !sim;
+    clearTimeout(avisoDemora);
+    textoPensando.textContent = "Pensando…";
+    // Se o provedor de IA estiver lento, avisa que não travou.
+    if (sim) {
+      avisoDemora = setTimeout(() => {
+        textoPensando.textContent = "Está demorando mais que o normal, mas a resposta está a caminho…";
+      }, 8000);
+    }
   }
 
   function erroComRetentativa(texto) {

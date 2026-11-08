@@ -134,3 +134,13 @@ async def test_gemini_extract_pede_json() -> None:
     assert resultado.dados.eixo == "Gestão e Negócios"
     config = json.loads(pedidos[0].content)["generationConfig"]
     assert config["responseMimeType"] == "application/json"
+
+
+async def test_tempo_esgotado_nao_repete_no_mesmo_modelo() -> None:
+    def travar(request: httpx2.Request) -> httpx2.Response:
+        raise httpx2.ReadTimeout("demorou", request=request)
+
+    provedor, pedidos = _gemini(travar)
+    with pytest.raises(LLMIndisponivel):
+        await provedor.complete("s", MSGS)
+    assert len(pedidos) == 1  # vai direto para o modelo reserva, sem esperar de novo

@@ -89,3 +89,54 @@ async def test_semaforo_limita_concorrencia() -> None:
     llm._complete = lento  # type: ignore[method-assign]
     await asyncio.gather(*(llm.complete("s", MSGS) for _ in range(6)))
     assert pico == 2
+
+
+# ---- Modelo reserva --------------------------------------------------------------------
+
+
+async def test_reserva_assume_quando_o_principal_segue_sobrecarregado() -> None:
+    from app.llm.reserva import ProvedorComReserva
+
+    principal = FakeProvider(falhas_transitorias=99, max_retries=1)
+    reserva = FakeProvider(
+        respostas=["da reserva", "stream da reserva"],
+        estruturados=[{"interesses": [], "cobertura": 0}],
+    )
+    llm = ProvedorComReserva(principal, reserva)
+
+    assert (await llm.complete("s", MSGS)).texto == "da reserva"
+    stream = llm.stream("s", MSGS)
+    assert "".join([p async for p in stream]) == "stream da reserva"
+    assert stream.uso.output_tokens > 0
+    assert (await llm.extract("s", MSGS, Perfil)).dados.interesses == []
+
+
+async def test_reserva_nao_e_usada_quando_o_principal_responde() -> None:
+    from app.llm.reserva import ProvedorComReserva
+
+    reserva = FakeProvider()
+    llm = ProvedorComReserva(FakeProvider(respostas=["principal"]), reserva)
+    assert (await llm.complete("s", MSGS)).texto == "principal"
+    assert reserva.chamadas == []
+
+
+async def test_reserva_tambem_indisponivel_vira_mensagem_amigavel() -> None:
+    from app.llm.reserva import ProvedorComReserva
+
+    llm = ProvedorComReserva(
+        FakeProvider(falhas_transitorias=99, max_retries=0),
+        FakeProvider(falhas_transitorias=99, max_retries=0),
+    )
+    with pytest.raises(LLMIndisponivel):
+        await llm.complete("s", MSGS)
+
+
+def test_factory_monta_reserva_so_quando_configurada() -> None:
+    from app.llm.factory import criar_provedor
+    from app.llm.reserva import ProvedorComReserva
+    from tests.conftest import make_settings
+
+    assert not isinstance(criar_provedor(make_settings(llm_provider="fake")), ProvedorComReserva)
+    llm = criar_provedor(make_settings(llm_provider="fake", llm_model_reserva="outro"))
+    assert isinstance(llm, ProvedorComReserva)
+    assert (llm.principal.modelo, llm.reserva.modelo) == ("claude-haiku-4-5", "outro")

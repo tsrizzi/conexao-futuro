@@ -17,8 +17,17 @@ def _segredo(valor: Any) -> str | None:
 
 
 def criar_provedor(settings: Settings) -> LLMProvider:
+    principal = _criar(settings, settings.llm_model)
+    if not settings.llm_model_reserva or settings.llm_model_reserva == settings.llm_model:
+        return principal
+    from app.llm.reserva import ProvedorComReserva
+
+    return ProvedorComReserva(principal, _criar(settings, settings.llm_model_reserva))
+
+
+def _criar(settings: Settings, modelo: str) -> LLMProvider:
     comuns: dict[str, Any] = {
-        "modelo": settings.llm_model,
+        "modelo": modelo,
         "max_tokens": settings.llm_max_tokens,
         "max_concurrency": settings.llm_max_concurrency,
         "max_retries": settings.llm_max_retries,

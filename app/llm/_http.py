@@ -2,7 +2,7 @@
 
 import httpx2
 
-from app.llm.base import LLMErro, LLMSobrecarregado
+from app.llm.base import LLMErro, LLMIndisponivel, LLMSobrecarregado
 
 STATUS_TRANSITORIOS = {408, 429, 500, 502, 503, 504, 529}
 
@@ -14,5 +14,8 @@ def verificar_status(resposta: httpx2.Response, provedor: str) -> None:
         raise LLMErro(f"{provedor}: HTTP {resposta.status_code}")
 
 
-def erro_de_rede(erro: httpx2.TransportError, provedor: str) -> LLMSobrecarregado:
+def erro_de_rede(erro: httpx2.TransportError, provedor: str) -> LLMErro:
+    if isinstance(erro, httpx2.TimeoutException):
+        # Travou: repetir no mesmo modelo só multiplica a espera. Vai direto ao reserva.
+        return LLMIndisponivel(erro)
     return LLMSobrecarregado(f"{provedor}: falha de rede ({type(erro).__name__})")
