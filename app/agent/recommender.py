@@ -3,7 +3,9 @@
 Regras garantidas pelo código, não pelo prompt:
 - todo `curso_id` precisa existir no catálogo E estar entre as fichas enviadas ao LLM;
 - com problema, o pedido é refeito UMA vez, explicando o erro;
-- diversidade: as 3 não podem ser do mesmo eixo, salvo eixo com confiança > 0,8;
+- diversidade: sempre pelo menos 2 eixos (a especificação permite 3 do mesmo eixo quando o
+  perfil é "muito claro"; aqui a regra é mais rígida de propósito: uma opção de outra área
+  estimula a comparação, e a "clareza" viria da confiança que o próprio LLM declara);
 - ofertas regionais vêm só de `ofertas_regiao.json`, nunca do LLM.
 """
 
@@ -24,7 +26,7 @@ from app.rag.retriever import ResultadoBusca
 log = logging.getLogger(__name__)
 
 CANDIDATOS = 15
-CONFIANCA_EIXO_UNICO = 0.8
+OUTROS_EIXOS_MINIMO = 3  # candidatos de outras áreas garantidos entre os 15
 MAX_TOKENS_RECOMENDACAO = 1500
 
 
@@ -84,13 +86,17 @@ class Recomendacao(BaseModel):
 def ficha_para_llm(curso: Curso) -> str:
     """Ficha enxuta: o que ajuda a escolher e justificar, sem burocracia (menos tokens)."""
     ocupacoes = "; ".join(curso.ocupacoes_cbo) or "-"
-    duracao = curso.carga_horaria_detalhes.splitlines()[1:2]
+    detalhes = curso.carga_horaria_detalhes.splitlines()
+    duracao = detalhes[1:2]
+    estagio = next((d for d in detalhes if "estágio" in d.lower()), "")
     return (
         f"## curso_id: {curso.id}\n"
         f"Nome: {curso.nome} | Eixo: {curso.eixo} | {curso.carga_horaria_min} horas"
         f"{' | ' + duracao[0] if duracao else ''}\n"
-        f"Perfil profissional: {curso.perfil_profissional[:1200]}\n"
-        f"Campo de atuação: {curso.campo_atuacao[:500]}\n"
+        # Inclui o trecho "são fundamentais", de onde saem os pontos de atenção (matérias etc.).
+        f"Perfil profissional: {curso.perfil_profissional[:2200]}\n"
+        + (f"Estágio: {estagio}\n" if estagio else "")
+        + f"Campo de atuação: {curso.campo_atuacao[:500]}\n"
         f"Ocupações: {ocupacoes}"
     )
 
@@ -163,9 +169,19 @@ class Recomendador:
         eixos = {e.eixo: e.confianca for e in perfil.eixos_provaveis}
         # A busca é CPU (embeddings): roda fora do event loop para não travar as outras sessões.
         resultados = await asyncio.to_thread(
-            self._buscador.buscar, consulta, eixos_provaveis=eixos, k=CANDIDATOS + len(ja_sugeridos)
+            self._buscador.buscar,
+            consulta,
+            eixos_provaveis=eixos,
+            k=CANDIDATOS * 2 + len(ja_sugeridos),
         )
-        return [r.curso for r in resultados if r.curso.id not in ja_sugeridos][:CANDIDATOS]
+        todos = [r.curso for r in resultados if r.curso.id not in ja_sugeridos]
+        candidatos = todos[:CANDIDATOS]
+        # Garante opções de outras áreas, para a regra de diversidade ter com o que trabalhar.
+        principal = candidatos[0].eixo if candidatos else None
+        outros = [c for c in candidatos if c.eixo != principal]
+        faltam = [c for c in todos[CANDIDATOS:] if c.eixo != principal]
+        extras = faltam[: max(0, OUTROS_EIXOS_MINIMO - len(outros))]
+        return candidatos[: CANDIDATOS - len(extras)] + extras
 
     async def _pedir(
         self,
@@ -217,18 +233,14 @@ class Recomendador:
         validas = validas[:quantidade]
         if len(validas) < quantidade:
             problemas.append(f"eram {quantidade} cursos válidos, vieram {len(validas)}")
-        if self._mesmo_eixo(validas, eixos):
+        if self._mesmo_eixo(validas):
             problemas.append("todos os cursos são do mesmo eixo; inclua um de outro eixo")
         return validas, problemas
 
-    def _mesmo_eixo(self, escolhas: list[Escolha], eixos: dict[str, float]) -> bool:
-        if len(escolhas) < 3:
+    def _mesmo_eixo(self, escolhas: list[Escolha]) -> bool:
+        if len(escolhas) < 2:
             return False
-        eixos_escolhidos = {self._curso(e.curso_id).eixo for e in escolhas}
-        if len(eixos_escolhidos) > 1:
-            return False
-        (eixo,) = eixos_escolhidos
-        return eixos.get(eixo, 0.0) <= CONFIANCA_EIXO_UNICO
+        return len({self._curso(e.curso_id).eixo for e in escolhas}) == 1
 
     def _garantir_diversidade(
         self,
@@ -237,8 +249,8 @@ class Recomendador:
         eixos: dict[str, float],
         perfil: Perfil,
     ) -> list[Escolha]:
-        """Se mesmo depois da nova tentativa vierem 3 do mesmo eixo, troca a última."""
-        if not self._mesmo_eixo(escolhas, eixos):
+        """Se mesmo depois da nova tentativa vierem todas do mesmo eixo, troca a última."""
+        if not self._mesmo_eixo(escolhas):
             return escolhas
         eixo = self._curso(escolhas[0].curso_id).eixo
         alternativa = next((c for c in candidatos if c.eixo != eixo), None)

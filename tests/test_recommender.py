@@ -125,19 +125,46 @@ async def test_diversidade_de_eixos(catalogo: Catalogo) -> None:
     assert rec.trilhas[-1].porque_combina.startswith("Uma opção de outra área")
 
 
-async def test_mesmo_eixo_permitido_quando_perfil_e_muito_claro(catalogo: Catalogo) -> None:
+async def test_diversidade_vale_mesmo_com_perfil_muito_claro(catalogo: Catalogo) -> None:
+    """Regra mais rígida que a da especificação: sempre pelo menos 2 eixos."""
     mesmo_eixo = (
         "tecnico-em-informatica",
         "tecnico-em-desenvolvimento-de-sistemas",
         "tecnico-em-redes-de-computadores",
     )
+    variado = (
+        "tecnico-em-informatica",
+        "tecnico-em-desenvolvimento-de-sistemas",
+        "tecnico-em-design-grafico",
+    )
     perfil = _perfil()
-    perfil.eixos_provaveis = [EixoProvavel(eixo="Informação e Comunicação", confianca=0.9)]
-    llm = FakeProvider(estruturados=[recomendacao(*mesmo_eixo)])
+    perfil.eixos_provaveis = [EixoProvavel(eixo="Informação e Comunicação", confianca=0.95)]
+    llm = FakeProvider(estruturados=[recomendacao(*mesmo_eixo), recomendacao(*variado)])
     recomendador, _ = _recomendador(catalogo, llm)
     rec = await recomendador.recomendar(perfil)
-    assert rec is not None and [t.curso.id for t in rec.trilhas] == list(mesmo_eixo)
-    assert len(llm.chamadas) == 1
+    assert rec is not None and [t.curso.id for t in rec.trilhas] == list(variado)
+    assert len(llm.chamadas) == 2
+
+
+def test_ficha_enviada_ao_llm_tem_o_que_e_fundamental_e_o_estagio(catalogo: Catalogo) -> None:
+    from app.agent.recommender import ficha_para_llm
+
+    ficha = ficha_para_llm(catalogo.get("tecnico-em-enfermagem"))  # type: ignore[arg-type]
+    assert "são fundamentais" in ficha
+    assert "Estágio:" in ficha
+
+
+async def test_candidatos_incluem_outras_areas(catalogo: Catalogo) -> None:
+    """Mesmo se a busca só trouxer uma área no topo, há opções de outras para comparar."""
+    ids_info = [c.id for c in catalogo.cursos if c.eixo == "Informação e Comunicação"]
+    outros = ["tecnico-em-design-grafico", "tecnico-em-enfermagem", "tecnico-em-administracao"]
+    buscador = BuscadorFixo(catalogo, ids=ids_info * 2 + outros)  # 16 de uma área no topo
+    recomendador = Recomendador(
+        FakeProvider(), buscador, catalogo, Ofertas([]), sistema="s", cobertura_minima=0.7
+    )
+    candidatos = await recomendador._candidatos(_perfil(), [])
+    assert len(candidatos) <= 15
+    assert len({c.eixo for c in candidatos}) > 1
 
 
 async def test_mais_sugestoes_nao_repete(catalogo: Catalogo) -> None:
