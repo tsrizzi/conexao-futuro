@@ -5,6 +5,9 @@
   const raiz = document.querySelector("[data-resultado]");
   const status = raiz.querySelector("[data-status]");
   const token = CF.sessao.token();
+  const codigo = CF.sessao.codigo();
+  // Conversa desta aba (token) ou, em outro aparelho, as trilhas salvas no código.
+  const pedido = { token, codigo };
 
   // Cada eixo do CNCT ganha sempre a mesma cor de linha.
   const EIXOS = [
@@ -99,7 +102,7 @@
   }
 
   async function textoTxt() {
-    const resposta = await CF.postarJSON("/api/resultado.txt", { token });
+    const resposta = await CF.postarJSON("/api/resultado.txt", pedido);
     return resposta.text();
   }
 
@@ -138,8 +141,8 @@
     raiz.querySelector("[data-baixar-txt]").addEventListener("click", baixarTxt);
     raiz.querySelector("[data-baixar-pdf]").addEventListener("click", baixarPdf);
     try {
-      if (!token) { vazio(); return; }
-      const resposta = await CF.postarJSON("/api/resultado", { token });
+      if (!token && !codigo) { vazio(); return; }
+      const resposta = await CF.postarJSON("/api/resultado", pedido);
       desenhar(await resposta.json());
     } catch (e) {
       vazio();

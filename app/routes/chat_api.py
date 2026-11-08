@@ -4,6 +4,7 @@ Cada resposta termina com o evento `sessao`, que traz a sessão assinada para o 
 guardar e reenviar na próxima mensagem (ver app/web/token.py).
 """
 
+import asyncio
 import json
 import logging
 from collections.abc import AsyncIterator
@@ -13,7 +14,8 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse, PlainTextResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
-from app.agent.exportar import para_exibicao, texto_resultado
+from app.agent.exportar import para_exibicao, texto_de_exibicao
+from app.agent.formulario import perfil_do_formulario
 from app.agent.orchestrator import (
     Evento,
     EventoAviso,
@@ -27,7 +29,9 @@ from app.agent.orchestrator import (
     Sessao,
 )
 from app.agent.prompts import carregar
+from app.db import repositorio
 from app.llm.base import MENSAGEM_SOBRECARGA
+from app.routes.acesso_api import MENSAGEM_CODIGO_INVALIDO, contar_tentativa
 from app.web.token import TAMANHO_MAXIMO, TokenInvalido, assinar, ler
 
 router = APIRouter(prefix="/api")
@@ -42,6 +46,15 @@ class PedidoToken(BaseModel):
 
 class PedidoMensagem(PedidoToken):
     texto: str = Field(max_length=2000)  # o limite de 500 é tratado com mensagem gentil
+
+
+class PedidoInicio(BaseModel):
+    codigo: str | None = Field(default=None, max_length=30)
+
+
+class PedidoResultado(BaseModel):
+    token: str | None = Field(default=None, max_length=TAMANHO_MAXIMO)
+    codigo: str | None = Field(default=None, max_length=30)
 
 
 def serializar(evento: Evento) -> tuple[str, dict[str, Any]]:
@@ -67,16 +80,35 @@ def _sse(tipo: str, dados: dict[str, Any]) -> str:
     return f"event: {tipo}\ndata: {json.dumps(dados, ensure_ascii=False)}\n\n"
 
 
+def _persistir(request: Request, sessao: Sessao, exibicao: dict[str, Any] | None) -> None:
+    """Para quem tem código: guarda o perfil estruturado e as trilhas. Nunca o texto."""
+    assert sessao.participante_id is not None
+    with request.app.state.sessoes.begin() as db:
+        if sessao.estado != "acolhimento":
+            repositorio.salvar_perfil(db, sessao.participante_id, sessao.perfil)
+        if exibicao is not None:
+            repositorio.salvar_recomendacao(db, sessao.participante_id, exibicao)
+
+
 async def _transmitir(
     request: Request, sessao: Sessao, fluxo: AsyncIterator[Evento]
 ) -> AsyncIterator[str]:
+    exibicao = None
     try:
         async for evento in fluxo:
-            yield _sse(*serializar(evento))
+            tipo, dados = serializar(evento)
+            if tipo == "recomendacao":
+                exibicao = dados
+            yield _sse(tipo, dados)
     except Exception:
         # Sem o texto da conversa no log: só o tipo do erro e o traceback do código.
         log.exception("Erro ao responder no chat")
         yield _sse("erro", {"texto": MENSAGEM_SOBRECARGA})
+    if sessao.participante_id:
+        try:
+            await asyncio.to_thread(_persistir, request, sessao, exibicao)
+        except Exception:
+            log.exception("Erro ao salvar perfil/trilhas do participante")
     yield _sse("sessao", {"token": assinar(sessao, request.app.state.chave)})
     yield _sse("fim", {})
 
@@ -104,11 +136,30 @@ async def _apenas_aviso(texto: str) -> AsyncIterator[Evento]:
     yield EventoAviso(texto)
 
 
+def _sessao_do_codigo(request: Request, codigo: str) -> tuple[Sessao, Any]:
+    """Começa a conversa a partir do que o participante já respondeu (CARREGA_FORMULARIO)."""
+    contar_tentativa(request)
+    with request.app.state.sessoes.begin() as db:
+        participante = repositorio.buscar_por_codigo(db, codigo, request.app.state.chave)
+        if participante is None:
+            raise HTTPException(status_code=404, detail=MENSAGEM_CODIGO_INVALIDO)
+        perfil = repositorio.perfil_de(participante) or perfil_do_formulario(
+            repositorio.respostas_de(participante)
+        )
+        return Sessao(participante_id=participante.id), perfil
+
+
 @router.post("/chat/iniciar")
-async def iniciar(request: Request) -> StreamingResponse:
+async def iniciar(request: Request, pedido: PedidoInicio | None = None) -> StreamingResponse:
     if not request.app.state.limite_inicio.permitir(_ip(request)):
         raise HTTPException(status_code=429, detail=carregar("msg_limite"))
     orquestrador: Orquestrador = request.app.state.orquestrador
+    if pedido and pedido.codigo:
+        sessao, perfil = await asyncio.to_thread(_sessao_do_codigo, request, pedido.codigo)
+        tem_perfil = perfil.cobertura > 0 or perfil.interesses or perfil.atividades_que_gosta
+        return _stream(
+            request, sessao, orquestrador.iniciar(sessao, perfil if tem_perfil else None)
+        )
     sessao = Sessao()
     return _stream(request, sessao, orquestrador.iniciar(sessao))
 
@@ -122,20 +173,35 @@ async def mensagem(request: Request, pedido: PedidoMensagem) -> StreamingRespons
     return _stream(request, sessao, orquestrador.responder(sessao, pedido.texto))
 
 
+def _exibicao(request: Request, pedido: PedidoResultado) -> dict[str, Any]:
+    """Trilhas da conversa atual (token) ou, em outro dispositivo, as salvas no código."""
+    if pedido.token:
+        sessao = _sessao(request, pedido.token)
+        if sessao.recomendacao is not None:
+            return para_exibicao(sessao.recomendacao)
+        if not pedido.codigo:
+            raise HTTPException(status_code=404, detail="Ainda não há trilhas nesta conversa.")
+    if not pedido.codigo:
+        raise HTTPException(status_code=400, detail=MENSAGEM_EXPIROU)
+    contar_tentativa(request)
+    with request.app.state.sessoes.begin() as db:
+        participante = repositorio.buscar_por_codigo(db, pedido.codigo, request.app.state.chave)
+        if participante is None:
+            raise HTTPException(status_code=404, detail=MENSAGEM_CODIGO_INVALIDO)
+        exibicao = repositorio.ultima_recomendacao(participante)
+    if exibicao is None:
+        raise HTTPException(status_code=404, detail="Ainda não há trilhas para esse código.")
+    return exibicao
+
+
 @router.post("/resultado")
-async def resultado(request: Request, pedido: PedidoToken) -> JSONResponse:
-    sessao = _sessao(request, pedido.token)
-    if sessao.recomendacao is None:
-        raise HTTPException(status_code=404, detail="Ainda não há trilhas nesta conversa.")
-    return JSONResponse(para_exibicao(sessao.recomendacao))
+def resultado(request: Request, pedido: PedidoResultado) -> JSONResponse:
+    return JSONResponse(_exibicao(request, pedido))
 
 
 @router.post("/resultado.txt")
-async def resultado_txt(request: Request, pedido: PedidoToken) -> PlainTextResponse:
-    sessao = _sessao(request, pedido.token)
-    if sessao.recomendacao is None:
-        raise HTTPException(status_code=404, detail="Ainda não há trilhas nesta conversa.")
+def resultado_txt(request: Request, pedido: PedidoResultado) -> PlainTextResponse:
     return PlainTextResponse(
-        texto_resultado(sessao.recomendacao),
+        texto_de_exibicao(_exibicao(request, pedido)),
         headers={"Content-Disposition": 'attachment; filename="minhas-trilhas.txt"'},
     )

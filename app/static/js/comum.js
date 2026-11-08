@@ -5,6 +5,7 @@ const CF = (() => {
   const CHAVE_TOKEN = "cf_token";
   const CHAVE_CONVERSA = "cf_conversa";
   const CHAVE_TURMA = "cf_turma";
+  const CHAVE_CODIGO = "cf_codigo";
 
   // sessionStorage some quando a aba fecha: é ali que a conversa mora (nada no servidor).
   function ler(chave) {
@@ -26,7 +27,11 @@ const CF = (() => {
     salvarConversa: (itens) => gravar(CHAVE_CONVERSA, JSON.stringify(itens)),
     turma: () => ler(CHAVE_TURMA),
     salvarTurma: (c) => gravar(CHAVE_TURMA, c),
+    // Código de acesso (formulário): só nesta aba; em outro aparelho, digita de novo.
+    codigo: () => ler(CHAVE_CODIGO),
+    salvarCodigo: (c) => gravar(CHAVE_CODIGO, c),
     limpar() { apagar(CHAVE_TOKEN); apagar(CHAVE_CONVERSA); },
+    esquecerCodigo: () => apagar(CHAVE_CODIGO),
   };
 
   // Texto vindo do servidor vira HTML seguro: escapa tudo e só então aplica **negrito**.
@@ -111,8 +116,11 @@ const CF = (() => {
   document.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll("[data-alternar-tema]").forEach((b) => b.addEventListener("click", alternarTema));
 
-    // "Começar conversa" no início sempre abre uma conversa nova.
+    // "Começar conversa" no início sempre abre uma conversa nova, sem código.
     document.querySelectorAll("[data-nova-conversa]").forEach((link) =>
+      link.addEventListener("click", () => { sessao.limpar(); sessao.esquecerCodigo(); }));
+    // Conversa nova, mas partindo das respostas do código.
+    document.querySelectorAll("[data-conversar-com-codigo]").forEach((link) =>
       link.addEventListener("click", () => sessao.limpar()));
 
     // Código da turma (opcional), guardado só nesta aba.

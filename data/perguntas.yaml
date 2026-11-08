@@ -1,0 +1,48 @@
+# Formulário de apoio (seção 7.4.3): 18 itens (3 por dimensão RIASEC), escolhidos de
+# data/soutec_itens.yaml e reescritos em linguagem jovem, + 3 perguntas abertas.
+# Escala de 1 (nada a ver comigo) a 5 (tudo a ver comigo). Todas podem ser puladas.
+# A pontuação de cada dimensão é a média normalizada dos seus itens respondidos.
+# Os itens seguem o ciclo do SouTec, para as dimensões ficarem misturadas.
+
+escala:
+  - { valor: 1, emoji: "😒", rotulo: "Nada a ver comigo" }
+  - { valor: 2, emoji: "🙁", rotulo: "Pouco a ver" }
+  - { valor: 3, emoji: "😐", rotulo: "Mais ou menos" }
+  - { valor: 4, emoji: "🙂", rotulo: "Tem a ver" }
+  - { valor: 5, emoji: "🤩", rotulo: "Tudo a ver comigo" }
+
+perguntas:
+  - { id: f01, dim: A, origem_soutec: 43, tipo: escala, texto: "Desenhar personagens ou ilustrações" }
+  - { id: f02, dim: C, origem_soutec: 38, tipo: escala, texto: "Organizar informações numa planilha" }
+  - { id: f03, dim: E, origem_soutec: 57, tipo: escala, texto: "Vender produtos ou serviços" }
+  - { id: f04, dim: I, origem_soutec: 10, tipo: escala, texto: "Fazer experiências num laboratório" }
+  - { id: f05, dim: R, origem_soutec: 5, tipo: escala, texto: "Montar um circuito eletrônico ou um robô" }
+  - { id: f06, dim: S, origem_soutec: 18, tipo: escala, texto: "Cuidar de quem está doente ou machucado" }
+  - { id: f07, dim: A, origem_soutec: 7, tipo: escala, texto: "Cantar ou tocar um instrumento" }
+  - { id: f08, dim: C, origem_soutec: 20, tipo: escala, texto: "Controlar as contas e o dinheiro de um lugar" }
+  - { id: f09, dim: E, origem_soutec: 27, tipo: escala, texto: "Abrir e tocar o seu próprio negócio" }
+  - { id: f10, dim: I, origem_soutec: 52, tipo: escala, texto: "Analisar amostras de água, alimentos ou sangue" }
+  - { id: f11, dim: R, origem_soutec: 53, tipo: escala, texto: "Consertar moto, carro ou bicicleta" }
+  - { id: f12, dim: S, origem_soutec: 72, tipo: escala, texto: "Ensinar alguma coisa para crianças" }
+  - { id: f13, dim: A, origem_soutec: 19, tipo: escala, texto: "Criar vídeos, posts ou artes para redes sociais" }
+  - { id: f14, dim: C, origem_soutec: 44, tipo: escala, texto: "Revisar documentos e achar os erros" }
+  - { id: f15, dim: E, origem_soutec: 39, tipo: escala, texto: "Liderar um time ou um grupo de trabalho" }
+  - { id: f16, dim: I, origem_soutec: 70, tipo: escala, texto: "Entender e criar sistemas de inteligência artificial" }
+  - { id: f17, dim: R, origem_soutec: 35, tipo: escala, texto: "Cuidar de animais ou de uma plantação" }
+  - { id: f18, dim: S, origem_soutec: 30, tipo: escala, texto: "Ouvir e ajudar um amigo que está com um problema" }
+
+  - id: aberta_tempo_livre
+    dim: null
+    tipo: aberta
+    texto: "O que você costuma fazer no seu tempo livre?"
+    exemplo: "ex.: jogo, desenho, ajudo meu pai na oficina, vejo vídeo de receita…"
+  - id: aberta_materias
+    dim: null
+    tipo: aberta
+    texto: "Quais matérias você mais curte na escola? E quais você menos curte?"
+    exemplo: "ex.: curto matemática e artes, não gosto de química"
+  - id: aberta_planos
+    dim: null
+    tipo: aberta
+    texto: "O que você pensa em fazer depois do Ensino Médio?"
+    exemplo: "ex.: trabalhar logo, fazer faculdade, ainda não sei"

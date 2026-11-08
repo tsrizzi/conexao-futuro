@@ -58,6 +58,19 @@ Prompts e mensagens fixas do agente ficam em `app/agent/prompts/*.md` (editávei
 no código). Os arquivos `msg_*.md` são textos mostrados como estão (boas-vindas, acolhimento
 com o CVV 188 etc.); os demais são instruções para o LLM.
 
+## Banco de dados, formulário e código de acesso
+
+O banco (SQLite local, Postgres em produção) é criado e migrado sozinho quando o app inicia
+(Alembic). Guarda só: respostas do formulário (abertas com dados pessoais mascarados), perfil
+estruturado e trilhas de quem tem código. **Nunca o texto da conversa.** O código de acesso
+(ex.: ONDA-4827) fica gravado só como HMAC, por isso a `SECRET_KEY` precisa ser fixa: se ela
+mudar, os códigos antigos param de funcionar.
+
+```bash
+uv run python -m alembic upgrade head          # migrar à mão (normalmente não precisa)
+uv run python scripts/limpar_expirados.py      # retenção (o app já roda a cada 24 h)
+```
+
 ## Testes e lint
 
 ```bash

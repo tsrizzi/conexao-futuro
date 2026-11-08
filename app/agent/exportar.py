@@ -102,8 +102,14 @@ def _linhas_oferta(titulo: str, ofertas: list[dict[str, Any]]) -> list[str]:
 
 
 def texto_resultado(rec: Recomendacao) -> str:
-    """Texto simples, bem estruturado, pensado para colar ou enviar ao NotebookLM."""
-    d = para_exibicao(rec)
+    return texto_de_exibicao(para_exibicao(rec))
+
+
+def texto_de_exibicao(d: dict[str, Any]) -> str:
+    """Texto simples, bem estruturado, pensado para colar ou enviar ao NotebookLM.
+
+    Recebe o mesmo dicionário da tela (também é o que fica salvo para quem tem código).
+    """
     linhas = ["MINHAS TRILHAS - Conexão Futuro", "", AVISO_IA, "", "Sobre mim", ""]
     linhas += [f"- {frase}" for frase in d["resumo_perfil"]]
     for dim in d["dimensoes"]:

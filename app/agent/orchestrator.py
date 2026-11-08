@@ -108,6 +108,8 @@ class MensagemSessao(BaseModel):
 class Sessao(BaseModel):
     # Identificador aleatório (limite de taxa). Não identifica a pessoa e não é gravado.
     id: str = Field(default_factory=lambda: secrets.token_urlsafe(12))
+    # Quem entrou com código: o perfil e as trilhas são salvos para essa pessoa (Fase 4).
+    participante_id: str | None = None
     estado: Estado = Estado.BOAS_VINDAS
     perfil: Perfil = Perfil()
     historico: list[MensagemSessao] = []  # já mascarado; fica só no navegador (token)
@@ -258,6 +260,9 @@ class Orquestrador:
         perfil_formulario.eixos_provaveis = eixos_validados(perfil_formulario, self._eixos_validos)
         perfil_formulario.calcular_cobertura()
         sessao.perfil = perfil_formulario
+        # "Pula as perguntas já respondidas": com o formulário, bastam ~3 trocas a mais.
+        if perfil_formulario.cobertura >= 0.5:
+            sessao.trocas_descoberta = TROCAS_MIN - 3
         intro = carregar("msg_boas_vindas_formulario")
         sessao.historico.append(MensagemSessao(papel="assistant", conteudo=intro))
         yield EventoTexto(intro + "\n\n")

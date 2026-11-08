@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block titulo %}Voltar com o seu código · Conexão Futuro{% endblock %}
+
+{% block conteudo %}
+<section class="entrar-codigo" data-entrar-codigo>
+  <h1 class="titulo-pagina">Voltar com o seu código</h1>
+  <p>Digite o código que você recebeu no formulário, tipo ONDA-4827. Pode ser em outro celular ou computador.</p>
+
+  <form class="form-codigo" data-form-codigo novalidate>
+    <label class="form-label" for="codigo">Seu código</label>
+    <div class="d-flex gap-2">
+      <input class="form-control campo-codigo" id="codigo" name="codigo" required maxlength="20"
+             autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ONDA-4827">
+      <button class="btn btn-primary" type="submit">Entrar</button>
+    </div>
+    <p class="erro-formulario" data-erro role="alert"></p>
+  </form>
+
+  <div class="achou" data-achou hidden tabindex="-1">
+    <h2 class="titulo-secao">Achei suas respostas</h2>
+    <p data-resumo-codigo></p>
+    <div class="acoes-abertura">
+      <a class="btn btn-primary btn-lg" href="/chat" data-conversar-com-codigo>Conversar a partir das minhas respostas</a>
+      <a class="btn btn-outline-primary btn-lg" href="/resultado" data-ver-trilhas hidden>Ver minhas trilhas</a>
+      <a class="btn btn-outline-primary btn-lg" href="/formulario?continuar=1" data-continuar-formulario hidden>Continuar o formulário</a>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/codigo.js"></script>
+{% endblock %}

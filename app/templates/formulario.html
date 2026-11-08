@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block titulo %}Formulário de apoio · Conexão Futuro{% endblock %}
+
+{% block conteudo %}
+<article class="formulario" data-formulario data-total="{{ perguntas|length }}">
+  <div data-etapa-perguntas>
+    <h1 class="titulo-pagina">Antes da conversa</h1>
+    <p class="intro-formulario">{{ perguntas|length }} perguntas rápidas, menos de 3 minutos. Pode pular qualquer uma. No fim você recebe um código para voltar às suas respostas.</p>
+
+    <div class="progresso progresso-formulario">
+      <p class="progresso-texto" id="progresso-form-rotulo" data-progresso-rotulo>Pergunta 1 de {{ perguntas|length }}</p>
+      <div class="progresso-trilho" role="progressbar" aria-labelledby="progresso-form-rotulo"
+           aria-valuemin="0" aria-valuemax="{{ perguntas|length }}" aria-valuenow="1" data-progresso-trilho>
+        <span class="progresso-linha" data-progresso-linha></span>
+      </div>
+    </div>
+
+    <form class="perguntas" data-form-perguntas novalidate>
+      {% for p in perguntas %}
+      <fieldset class="cartao-pergunta" data-pergunta="{{ p.id }}" data-tipo="{{ p.tipo }}"{% if not loop.first %} hidden{% endif %}>
+        {% if p.tipo == "escala" %}
+        <legend class="pergunta-texto">
+          <span class="pergunta-dica">Quanto isso tem a ver com você?</span>
+          {{ p.texto }}
+        </legend>
+        <div class="escala">
+          {% for opcao in escala %}
+          <input class="escala-opcao" type="radio" name="{{ p.id }}" id="{{ p.id }}-{{ opcao.valor }}" value="{{ opcao.valor }}">
+          <label class="escala-rotulo" for="{{ p.id }}-{{ opcao.valor }}">
+            <span class="escala-emoji" aria-hidden="true">{{ opcao.emoji }}</span>
+            <span>{{ opcao.rotulo }}</span>
+          </label>
+          {% endfor %}
+        </div>
+        {% else %}
+        <legend class="pergunta-texto">{{ p.texto }}</legend>
+        <label class="visually-hidden" for="{{ p.id }}-texto">Sua resposta</label>
+        <textarea class="form-control" id="{{ p.id }}-texto" name="{{ p.id }}" rows="3" maxlength="500"
+                  placeholder="{{ p.exemplo }}"></textarea>
+        <p class="form-text">Não precisa escrever nada pessoal, como nome ou escola.</p>
+        {% endif %}
+
+        <div class="navegacao-pergunta">
+          <button type="button" class="btn btn-outline-secondary" data-voltar{% if loop.first %} hidden{% endif %}>Voltar</button>
+          <button type="button" class="btn btn-outline-secondary" data-pular>Pular</button>
+          <button type="button" class="btn btn-primary" data-proxima>{% if loop.last %}Terminar{% else %}Próxima{% endif %}</button>
+        </div>
+      </fieldset>
+      {% endfor %}
+    </form>
+
+    <button type="button" class="link-discreto botao-link" data-parar>Parar e continuar depois</button>
+    <p class="erro-formulario" data-erro role="alert"></p>
+  </div>
+
+  <section class="etapa-codigo" data-etapa-codigo hidden aria-labelledby="titulo-codigo" tabindex="-1">
+    <h1 class="titulo-pagina" id="titulo-codigo" data-titulo-codigo>Pronto!</h1>
+    <div class="acolhimento" data-acolhimento hidden></div>
+    <p>Este é o seu código:</p>
+    <p class="codigo-grande" data-codigo></p>
+    <button type="button" class="btn btn-outline-primary" data-copiar-codigo>Copiar código</button>
+    <p class="status-acao" data-status-codigo aria-live="polite"></p>
+    <p class="aviso-codigo"><strong>Anote seu código!</strong> É com ele que você volta pras suas respostas. A gente não pede seu nome.</p>
+    <div class="acoes-abertura">
+      <a class="btn btn-primary btn-lg" href="/chat" data-conversar-com-codigo>Começar conversa</a>
+      <a class="link-discreto" href="/">Voltar ao início</a>
+    </div>
+  </section>
+</article>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/formulario.js"></script>
+{% endblock %}

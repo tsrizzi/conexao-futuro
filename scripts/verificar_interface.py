@@ -37,6 +37,8 @@ import websockets  # noqa: E402
 from app.agent.ofertas import Ofertas  # noqa: E402
 from app.agent.orchestrator import Orquestrador  # noqa: E402
 from app.config import Settings  # noqa: E402
+from app.db.models import Base  # noqa: E402
+from app.db.session import criar_engine, fabrica_de_sessoes  # noqa: E402
 from app.llm.fake import FakeProvider  # noqa: E402
 from app.main import create_app  # noqa: E402
 from app.rag.catalog import Catalogo  # noqa: E402
@@ -82,7 +84,11 @@ def app_demo() -> Any:
     catalogo = Catalogo.carregar()
     orq = Orquestrador(llm, catalogo, BuscadorFixo(catalogo), Ofertas([]))
     config = Settings(_env_file=None, llm_provider="fake", secret_key="d" * 32)  # type: ignore[call-arg, arg-type]
-    return create_app(config, llm=llm, orquestrador=orq)
+    # Arquivo temporário (o SQLite em memória não aguenta requisições simultâneas).
+    banco = Path(tempfile.mkdtemp(prefix="cf-banco-")) / "demo.db"
+    engine = criar_engine(f"sqlite:///{banco.as_posix()}")
+    Base.metadata.create_all(engine)
+    return create_app(config, llm=llm, orquestrador=orq, sessoes=fabrica_de_sessoes(engine))
 
 
 def porta_livre() -> int:
@@ -180,6 +186,31 @@ async def percorrer(cdp: CDP, base: str, tema: str, achados: dict[str, Any]) -> 
     await cdp.abrir(f"{base}/")
     await cdp.captura(f"{tema}-1-inicio")
     await checar(cdp, f"{tema}/inicio", achados)
+
+    # Formulário: responde a 1ª, pula o resto e chega ao código.
+    await cdp.abrir(f"{base}/formulario")
+    await cdp.js("document.querySelector('[for=\"f01-5\"]').click()")
+    await cdp.captura(f"{tema}-5-formulario", inteira=False)
+    await checar(cdp, f"{tema}/formulario", achados)
+    await cdp.js("document.querySelector('[data-pergunta]:not([hidden]) [data-proxima]').click()")
+    await cdp.js(
+        "{ for (let i = 0; i < 25; i++) { const b = document.querySelector("
+        "'[data-pergunta]:not([hidden]) [data-pular]'); if (b) b.click(); } }"
+    )
+    await cdp.esperar("!document.querySelector('[data-etapa-codigo]').hidden")
+    await cdp.captura(f"{tema}-6-codigo-gerado", inteira=False)
+    await checar(cdp, f"{tema}/codigo-gerado", achados)
+    codigo = await cdp.js("document.querySelector('[data-codigo]').textContent")
+
+    await cdp.abrir(f"{base}/codigo")
+    await cdp.js(
+        f"{{ document.querySelector('#codigo').value = {json.dumps(codigo.lower())}; "
+        "document.querySelector('[data-form-codigo]').requestSubmit(); }"
+    )
+    await cdp.esperar("!document.querySelector('[data-achou]').hidden")
+    await cdp.captura(f"{tema}-7-entrar-codigo", inteira=False)
+    await checar(cdp, f"{tema}/entrar-codigo", achados)
+    await cdp.js("sessionStorage.clear()")
 
     await cdp.abrir(f"{base}/chat")
     await cdp.esperar(mensagens_ia(1))

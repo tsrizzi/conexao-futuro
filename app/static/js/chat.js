@@ -217,6 +217,7 @@
   } else {
     CF.sessao.limpar();
     historico = [];
-    conversar("/api/chat/iniciar", {});
+    const codigo = CF.sessao.codigo();
+    conversar("/api/chat/iniciar", codigo ? { codigo } : {});
   }
 })();

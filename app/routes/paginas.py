@@ -9,6 +9,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from markupsafe import Markup
 
+from app.agent.formulario import carregar_formulario
 from app.web.markdown import para_html
 
 RAIZ = Path(__file__).resolve().parents[2]
@@ -49,9 +50,10 @@ async def privacidade(request: Request) -> HTMLResponse:
 
 @router.get("/formulario", response_class=HTMLResponse)
 async def formulario(request: Request) -> HTMLResponse:
-    return _pagina(request, "em_breve.html", titulo="Formulário de apoio")
+    dados = carregar_formulario()
+    return _pagina(request, "formulario.html", perguntas=dados.perguntas, escala=dados.escala)
 
 
 @router.get("/codigo", response_class=HTMLResponse)
 async def codigo(request: Request) -> HTMLResponse:
-    return _pagina(request, "em_breve.html", titulo="Voltar com o seu código")
+    return _pagina(request, "codigo.html")

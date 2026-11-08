@@ -560,6 +560,92 @@ main:focus { outline: none; }
 .texto-longo h2 { font-size: 1.3rem; font-weight: 800; margin: 2rem 0 0.6rem; }
 .texto-longo ul { padding-left: 1.2rem; }
 
+/* ---- Formulário de apoio ------------------------------------------------------------ */
+
+.intro-formulario { font-size: 1.0625rem; max-width: 34rem; }
+.progresso-formulario { margin: 1.25rem 0 1.5rem; max-width: 30rem; }
+
+.cartao-pergunta { border: 0; padding: 0; margin: 0; min-width: 0; }
+.pergunta-texto {
+  font-family: var(--fonte-titulo);
+  font-size: clamp(1.5rem, 6.5vw, 2rem);
+  font-weight: 800;
+  line-height: 1.15;
+  margin-bottom: 1.25rem;
+  float: none;
+}
+.pergunta-dica {
+  display: block;
+  font-family: var(--fonte-texto);
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--cf-tinta-suave);
+  margin-bottom: 0.35rem;
+}
+
+.escala { display: grid; gap: 0.5rem; max-width: 26rem; }
+.escala-opcao { position: absolute; opacity: 0; pointer-events: none; }
+.escala-rotulo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 3.25rem;
+  padding: 0.5rem 1rem;
+  border: 2px solid var(--cf-borda);
+  border-radius: 0.75rem;
+  background: var(--cf-superficie);
+  font-weight: 700;
+  cursor: pointer;
+}
+.escala-emoji { font-size: 1.5rem; line-height: 1; }
+.escala-opcao:checked + .escala-rotulo {
+  border-color: var(--cf-acao);
+  box-shadow: inset 0 0 0 2px var(--cf-acao);
+}
+.escala-opcao:focus-visible + .escala-rotulo { outline: 3px solid var(--cf-acao); outline-offset: 2px; }
+
+.navegacao-pergunta {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+  max-width: 26rem;
+}
+.navegacao-pergunta [data-proxima] { margin-left: auto; }
+
+.botao-link {
+  background: none;
+  border: 0;
+  padding: 0.5rem 0;
+  margin-top: 1.5rem;
+  color: rgb(var(--bs-link-color-rgb));
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+.erro-formulario { color: var(--cf-erro); font-weight: 700; min-height: 1.5rem; margin-top: 0.75rem; }
+
+.etapa-codigo:focus,
+.achou:focus { outline: none; }
+.codigo-grande {
+  font-family: var(--fonte-titulo);
+  font-size: clamp(2.5rem, 13vw, 3.5rem);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  margin: 0.25rem 0 1rem;
+  color: var(--cf-acao);
+}
+.aviso-codigo { margin-top: 1rem; max-width: 30rem; }
+.acolhimento {
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  border: 2px solid var(--cf-alerta);
+  border-radius: 0.75rem;
+  background: var(--cf-superficie);
+}
+
+.campo-codigo { text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; }
+.form-codigo { max-width: 26rem; margin-top: 1.25rem; }
+
 /* ---- Telas maiores ------------------------------------------------------------------ */
 
 @media (min-width: 40em) {
