@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block titulo %}Conversa · Conexão Futuro{% endblock %}
+{% block classe_corpo %}pagina pagina-chat{% endblock %}
+
+{% block topo %}
+<header class="topo topo-chat">
+  <a class="voltar" href="/" aria-label="Voltar para o início">‹</a>
+  <div class="progresso" data-progresso>
+    <p class="progresso-texto" id="progresso-rotulo">Começando a te conhecer</p>
+    <div class="progresso-trilho" role="progressbar" aria-labelledby="progresso-rotulo"
+         aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+      <span class="progresso-linha" data-progresso-linha></span>
+    </div>
+  </div>
+  <button type="button" class="botao-tema" data-alternar-tema aria-label="Alternar tema claro ou escuro">
+    <span aria-hidden="true">◐</span>
+  </button>
+</header>
+{% endblock %}
+
+{% block conteudo %}
+<h1 class="visually-hidden">Conversa com a inteligência artificial</h1>
+<div role="log" aria-live="polite" aria-label="Mensagens da conversa">
+  <ol class="conversa" data-conversa></ol>
+</div>
+<p class="pensando" data-pensando hidden>
+  <span class="pensando-pontos" aria-hidden="true"><i></i><i></i><i></i></span>
+  <span>Pensando…</span>
+</p>
+{% endblock %}
+
+{% block rodape %}
+<footer class="compositor">
+  <form class="compositor-form" data-compositor>
+    <label class="visually-hidden" for="mensagem">Sua mensagem</label>
+    <textarea id="mensagem" name="mensagem" rows="1" maxlength="500" required
+              placeholder="Escreva aqui…" enterkeyhint="send" aria-describedby="contador"></textarea>
+    <button class="btn btn-primary botao-enviar" type="submit">Enviar</button>
+  </form>
+  <p class="compositor-rodape">
+    <span>Você está conversando com uma inteligência artificial. <a href="/privacidade">Privacidade</a></span>
+    <span id="contador" data-contador>0/500</span>
+  </p>
+</footer>
+
+<template id="modelo-trilhas-prontas">
+  <li class="mensagem mensagem-ia mensagem-trilhas">
+    <p class="trilhas-prontas-titulo">Suas trilhas estão prontas</p>
+    <ul class="trilhas-prontas-lista" data-lista></ul>
+    <a class="btn btn-primary" href="/resultado">Ver minhas trilhas</a>
+  </li>
+</template>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/chat.js"></script>
+{% endblock %}

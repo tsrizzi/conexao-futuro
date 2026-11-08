@@ -69,6 +69,13 @@ class Settings(BaseSettings):
     def _bloqueia_gemini_em_producao(self) -> "Settings":
         if self.app_env == AppEnv.PRODUCTION and self.llm_provider == LLMProviderName.GEMINI:
             raise GeminiBloqueadoEmProducao(MENSAGEM_GEMINI_BLOQUEADO)
+        if self.app_env == AppEnv.PRODUCTION and not (
+            self.secret_key and len(self.secret_key.get_secret_value()) >= 32
+        ):
+            raise ValueError(
+                "SECRET_KEY com pelo menos 32 caracteres é obrigatória em production "
+                '(gere com: python -c "import secrets; print(secrets.token_urlsafe(48))").'
+            )
         if self.app_env == AppEnv.PRODUCTION and self.log_conversas:
             raise ValueError(
                 "LOG_CONVERSAS=true só é permitido em testes com adultos, nunca em production."

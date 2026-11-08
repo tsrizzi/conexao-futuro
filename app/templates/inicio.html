@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block conteudo %}
+<section class="abertura">
+  <h1 class="titulo-abertura">{{ total_cursos }} cursos técnicos no catálogo do MEC. Qual deles tem a ver com você?</h1>
+
+  <figure class="mapa-abertura" aria-hidden="true">
+    <svg viewBox="0 0 320 214" focusable="false">
+      <g class="mapa-linhas" fill="none" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+        <path class="linha-0" d="M24 26 V 46 Q24 54 32 54 H 296"/>
+        <path class="linha-1" d="M24 26 V 82 Q24 92 34 92 H 296"/>
+        <path class="linha-2" d="M24 26 V 120 Q24 130 34 130 H 296"/>
+        <path class="linha-3" d="M24 26 V 158 Q24 168 34 168 H 296"/>
+        <path class="linha-4" d="M24 26 V 196 Q24 206 34 206 H 296"/>
+      </g>
+      <g class="mapa-estacoes">
+        <circle cx="24" cy="20" r="11"/>
+        <circle cx="296" cy="54" r="7"/><circle cx="296" cy="92" r="7"/><circle cx="296" cy="130" r="7"/>
+        <circle cx="296" cy="168" r="7"/><circle cx="296" cy="206" r="7"/>
+      </g>
+      <g class="mapa-rotulos">
+        <text x="44" y="24" class="mapa-voce">você</text>
+        <text x="52" y="44">Informação e Comunicação</text>
+        <text x="52" y="82">Ambiente e Saúde</text>
+        <text x="52" y="120">Produção Cultural e Design</text>
+        <text x="52" y="158">Controle e Processos Industriais</text>
+        <text x="52" y="196">Gestão e Negócios</text>
+      </g>
+    </svg>
+  </figure>
+
+  <p class="texto-abertura">Converse com uma inteligência artificial sobre o que você curte e receba 3 sugestões de curso, com o porquê de cada uma. Leva uns 10 minutos e você não precisa dizer seu nome.</p>
+
+  <div class="acoes-abertura">
+    <a class="btn btn-primary btn-lg" href="/chat" data-nova-conversa>Começar conversa</a>
+    <a class="btn btn-outline-primary btn-lg" href="/formulario">Responder o formulário antes</a>
+    <a class="link-discreto" href="/codigo">Já tenho um código</a>
+  </div>
+
+  <details class="turma">
+    <summary>Tenho o código da turma</summary>
+    <form class="form-turma" data-form-turma>
+      <label class="form-label" for="codigo-turma">Código que o professor passou</label>
+      <div class="d-flex gap-2">
+        <input class="form-control" id="codigo-turma" name="codigo" maxlength="12"
+               autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ex.: GUA-2B-7K">
+        <button class="btn btn-outline-secondary" type="submit">Salvar</button>
+      </div>
+      <p class="form-text" data-turma-status aria-live="polite">É opcional. Ajuda o professor a ver os números da turma, sem saber quem é quem.</p>
+    </form>
+  </details>
+</section>
+{% endblock %}

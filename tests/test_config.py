@@ -34,7 +34,17 @@ def test_gemini_permitido_em_desenvolvimento() -> None:
 
 def test_log_conversas_proibido_em_producao() -> None:
     with pytest.raises(ValidationError, match="LOG_CONVERSAS"):
-        make_settings(app_env="production", llm_provider="anthropic", log_conversas=True)
+        make_settings(
+            app_env="production", llm_provider="anthropic", log_conversas=True, secret_key="x" * 32
+        )
+
+
+def test_secret_key_obrigatoria_em_producao() -> None:
+    with pytest.raises(ValidationError, match="SECRET_KEY"):
+        make_settings(app_env="production", llm_provider="anthropic")
+    with pytest.raises(ValidationError, match="SECRET_KEY"):
+        make_settings(app_env="production", llm_provider="anthropic", secret_key="curta")
+    assert make_settings(app_env="production", llm_provider="anthropic", secret_key="x" * 32)
 
 
 def test_segredos_nao_aparecem_no_repr() -> None:

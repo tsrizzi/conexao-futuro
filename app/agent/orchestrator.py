@@ -10,18 +10,20 @@ Para cada mensagem do estudante:
 3. a transição de estado é decidida pelo CÓDIGO, a partir dos sinais e da cobertura;
 4. a resposta é gerada em streaming e passa pelo filtro de saída antes de ser exibida.
 
-A sessão vive só na memória do processo. Nada do texto da conversa é gravado.
+A sessão viaja assinada para o navegador (app/web/token.py). Nada do texto da conversa é
+gravado no servidor.
 """
 
 import asyncio
 import logging
 import re
+import secrets
 from collections.abc import AsyncIterator, Iterable
 from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.agent.ofertas import Ofertas
 from app.agent.profile import (
@@ -104,9 +106,11 @@ class MensagemSessao(BaseModel):
 
 
 class Sessao(BaseModel):
+    # Identificador aleatório (limite de taxa). Não identifica a pessoa e não é gravado.
+    id: str = Field(default_factory=lambda: secrets.token_urlsafe(12))
     estado: Estado = Estado.BOAS_VINDAS
     perfil: Perfil = Perfil()
-    historico: list[MensagemSessao] = []  # já mascarado; só na memória
+    historico: list[MensagemSessao] = []  # já mascarado; fica só no navegador (token)
     trocas_descoberta: int = 0
     confirmacoes: int = 0
     sugeridos: list[str] = []
@@ -225,6 +229,14 @@ class Orquestrador:
             sistema=self._sistema,
             cobertura_minima=cobertura_minima,
         )
+
+    @property
+    def catalogo(self) -> Catalogo:
+        return self._catalogo
+
+    @property
+    def total_cursos_sugeriveis(self) -> int:
+        return sum(1 for c in self._catalogo.cursos if c.eixo in self._eixos_validos)
 
     # ---- Entrada -----------------------------------------------------------------------
 

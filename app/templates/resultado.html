@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block titulo %}Minhas trilhas · Conexão Futuro{% endblock %}
+
+{% block conteudo %}
+<article class="resultado" data-resultado aria-busy="true">
+  <h1 class="titulo-pagina">Minhas trilhas</h1>
+
+  <p class="carregando" data-carregando>Carregando suas trilhas…</p>
+
+  <div class="vazio" data-vazio hidden>
+    <p>Você ainda não tem trilhas. Elas aparecem aqui quando a conversa termina.</p>
+    <a class="btn btn-primary btn-lg" href="/chat">Ir para a conversa</a>
+  </div>
+
+  <div data-conteudo hidden>
+    <section class="sobre" aria-labelledby="titulo-sobre">
+      <h2 id="titulo-sobre" class="titulo-secao">O que eu entendi de você</h2>
+      <ul class="sobre-lista" data-resumo></ul>
+      <dl class="dimensoes" data-dimensoes></dl>
+      <p class="aviso-incompleta" data-incompleta hidden>A conversa foi curta. Se quiser sugestões mais certeiras, continue conversando.</p>
+    </section>
+
+    <section aria-labelledby="titulo-trilhas">
+      <h2 id="titulo-trilhas" class="titulo-secao">3 caminhos para você pensar</h2>
+      <div class="trilhas" data-trilhas></div>
+    </section>
+
+    <section class="pense" aria-labelledby="titulo-pense">
+      <h2 id="titulo-pense" class="titulo-secao">Pense criticamente</h2>
+      <ul data-pense></ul>
+    </section>
+
+    <p class="fonte">Sugestões feitas por uma inteligência artificial a partir do Catálogo Nacional de Cursos Técnicos, <span data-edicao></span>.</p>
+
+    <div class="acoes-resultado" role="group" aria-label="O que fazer com as trilhas">
+      <button type="button" class="btn btn-primary" data-copiar>Copiar</button>
+      <button type="button" class="btn btn-outline-primary" data-baixar-txt>Baixar .txt</button>
+      <button type="button" class="btn btn-outline-primary" data-baixar-pdf>Baixar PDF</button>
+      <a class="btn btn-outline-primary" data-padlet hidden target="_blank" rel="noopener">Abrir mural da turma</a>
+      <a class="btn btn-outline-secondary" href="/chat">Continuar conversando</a>
+    </div>
+    <p class="status-acao" data-status aria-live="polite"></p>
+    <p class="dica-notebooklm">Dica: o arquivo .txt ou o PDF podem ser enviados como fonte no NotebookLM para você estudar suas trilhas.</p>
+  </div>
+</article>
+
+<template id="modelo-trilha">
+  <section class="trilha">
+    <h3 class="trilha-nome"></h3>
+    <p class="trilha-meta"></p>
+    <ol class="estacoes">
+      <li class="estacao"><h4>Por que combina com você</h4><p data-campo="porque"></p></li>
+      <li class="estacao"><h4>O que esse profissional faz</h4><ul data-campo="faz"></ul></li>
+      <li class="estacao"><h4>Fique de olho</h4><p data-campo="atencao"></p></li>
+      <li class="estacao"><h4>Onde estudar</h4><div data-campo="onde"></div></li>
+    </ol>
+  </section>
+</template>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/resultado.js"></script>
+{% endblock %}

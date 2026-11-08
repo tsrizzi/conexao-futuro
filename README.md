@@ -9,9 +9,22 @@ do Catálogo Nacional de Cursos Técnicos (CNCT). Especificação completa em
 ```bash
 uv sync                          # instala dependências (cria .venv)
 cp .env.example .env             # preencha ANTHROPIC_API_KEY (ou use LLM_PROVIDER=fake/ollama)
-uv run uvicorn app.main:app --reload
-# http://127.0.0.1:8000/health
+uv run python -m uvicorn app.main:app --reload
+# abra http://127.0.0.1:8000
 ```
+
+(No Windows com Controle de Aplicativo, o `uvicorn.exe` pode ser bloqueado; por isso o
+`python -m uvicorn`.)
+
+## Verificar a interface (360 px, acessibilidade)
+
+```bash
+uv run python scripts/verificar_interface.py
+```
+
+Sobe o app com um LLM falso, percorre início -> conversa -> trilhas -> resultado no Chrome
+headless (temas claro e escuro), roda o axe-core e salva capturas em `.cache/capturas/`.
+O Lighthouse completo: abra o site no Chrome, F12 -> Lighthouse -> Acessibilidade.
 
 Sem chave de API, dá para desenvolver com custo zero usando `LLM_PROVIDER=fake` (respostas de
 teste) ou `LLM_PROVIDER=ollama` (modelo local, ex.: `LLM_MODEL=qwen2.5:3b`).
