@@ -243,7 +243,10 @@ class Orquestrador:
     # ---- Entrada -----------------------------------------------------------------------
 
     async def iniciar(
-        self, sessao: Sessao, perfil_formulario: Perfil | None = None
+        self,
+        sessao: Sessao,
+        perfil_formulario: Perfil | None = None,
+        resumo_formulario: str = "",
     ) -> AsyncIterator[Evento]:
         """Primeira mensagem: sempre avisa que é uma IA (regra 4)."""
         if sessao.estado != Estado.BOAS_VINDAS:
@@ -269,6 +272,7 @@ class Orquestrador:
         yield EventoProgresso(sessao.perfil.cobertura)
         instrucoes = carregar(
             "estado_formulario",
+            resumo=resumo_formulario or "(sem resumo)",
             lacunas=self._lista(sessao.perfil.lacunas()[:4]),
             perfil=sessao.perfil.para_prompt(),
         )

@@ -86,10 +86,13 @@ def perfil_do_formulario(respostas: dict[str, str]) -> Perfil:
             f"no formulário, curte: {p.texto.lower()}" for p, v in itens if v >= NOTA_FORTE
         ]
         evidencias += [
+            f"no formulário, mais ou menos: {p.texto.lower()}"
+            for p, v in itens
+            if NOTA_FRACA < v < NOTA_FORTE
+        ]
+        evidencias += [
             f"no formulário, não curte: {p.texto.lower()}" for p, v in itens if v <= NOTA_FRACA
         ]
-        if not evidencias:
-            evidencias = [f"no formulário, mais ou menos: {itens[0][0].texto.lower()}"]
         setattr(
             perfil.dimensoes,
             codigo,
@@ -104,3 +107,39 @@ def perfil_do_formulario(respostas: dict[str, str]) -> Perfil:
         perfil.restricoes = [f"planos depois do EM: {texto}"]
     perfil.calcular_cobertura()
     return perfil
+
+
+def resumo_do_formulario(respostas: dict[str, str]) -> str:
+    """Resumo concreto para o agente abrir a conversa sem inventar (montado pelo código).
+
+    Diz o que mais chegou perto, mesmo quando nada empolgou: "mais ou menos" também é pista.
+    """
+    formulario = carregar_formulario()
+    notas = [
+        (p.texto.lower(), int(respostas[p.id]))
+        for p in formulario.perguntas
+        if p.tipo == "escala" and p.id in respostas
+    ]
+    linhas = [f"- Respondeu {len(notas)} das 18 atividades da escala de 1 a 5."]
+    if notas:
+        maior = max(v for _, v in notas)
+        topo = [t for t, v in notas if v == maior]
+        rotulo = {5: "tudo a ver", 4: "tem a ver", 3: "mais ou menos"}.get(maior)
+        if rotulo:
+            linhas.append(f"- O que mais chegou perto ({rotulo}): " + "; ".join(topo[:4]) + ".")
+        if maior < NOTA_FORTE:
+            linhas.append("- Nenhuma atividade foi marcada como 'tem a ver' ou 'tudo a ver'.")
+        if maior <= NOTA_FRACA:
+            linhas.append("- Todas foram marcadas como 'pouco' ou 'nada a ver'.")
+        nada = [t for t, v in notas if v == 1]
+        if nada:
+            linhas.append(f"- 'Nada a ver' para {len(nada)} atividade(s), por exemplo: {nada[0]}.")
+    rotulos_abertas = {
+        "aberta_tempo_livre": "No tempo livre",
+        "aberta_materias": "Sobre as matérias",
+        "aberta_planos": "Depois do EM",
+    }
+    for pergunta_id, rotulo in rotulos_abertas.items():
+        if texto := respostas.get(pergunta_id):
+            linhas.append(f'- {rotulo}, escreveu: "{texto}"')
+    return "\n".join(linhas)

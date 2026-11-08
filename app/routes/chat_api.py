@@ -15,7 +15,7 @@ from fastapi.responses import JSONResponse, PlainTextResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from app.agent.exportar import para_exibicao, texto_de_exibicao
-from app.agent.formulario import perfil_do_formulario
+from app.agent.formulario import perfil_do_formulario, resumo_do_formulario
 from app.agent.orchestrator import (
     Evento,
     EventoAviso,
@@ -136,17 +136,16 @@ async def _apenas_aviso(texto: str) -> AsyncIterator[Evento]:
     yield EventoAviso(texto)
 
 
-def _sessao_do_codigo(request: Request, codigo: str) -> tuple[Sessao, Any]:
+def _sessao_do_codigo(request: Request, codigo: str) -> tuple[Sessao, Any, str]:
     """Começa a conversa a partir do que o participante já respondeu (CARREGA_FORMULARIO)."""
     contar_tentativa(request)
     with request.app.state.sessoes.begin() as db:
         participante = repositorio.buscar_por_codigo(db, codigo, request.app.state.chave)
         if participante is None:
             raise HTTPException(status_code=404, detail=MENSAGEM_CODIGO_INVALIDO)
-        perfil = repositorio.perfil_de(participante) or perfil_do_formulario(
-            repositorio.respostas_de(participante)
-        )
-        return Sessao(participante_id=participante.id), perfil
+        respostas = repositorio.respostas_de(participante)
+        perfil = repositorio.perfil_de(participante) or perfil_do_formulario(respostas)
+        return Sessao(participante_id=participante.id), perfil, resumo_do_formulario(respostas)
 
 
 @router.post("/chat/iniciar")
@@ -155,11 +154,10 @@ async def iniciar(request: Request, pedido: PedidoInicio | None = None) -> Strea
         raise HTTPException(status_code=429, detail=carregar("msg_limite"))
     orquestrador: Orquestrador = request.app.state.orquestrador
     if pedido and pedido.codigo:
-        sessao, perfil = await asyncio.to_thread(_sessao_do_codigo, request, pedido.codigo)
+        sessao, perfil, resumo = await asyncio.to_thread(_sessao_do_codigo, request, pedido.codigo)
         tem_perfil = perfil.cobertura > 0 or perfil.interesses or perfil.atividades_que_gosta
-        return _stream(
-            request, sessao, orquestrador.iniciar(sessao, perfil if tem_perfil else None)
-        )
+        fluxo = orquestrador.iniciar(sessao, perfil if tem_perfil else None, resumo)
+        return _stream(request, sessao, fluxo)
     sessao = Sessao()
     return _stream(request, sessao, orquestrador.iniciar(sessao))
 

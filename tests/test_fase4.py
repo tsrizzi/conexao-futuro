@@ -280,3 +280,38 @@ def test_paginas_do_formulario_e_do_codigo(client: TestClient) -> None:
     assert "Pular" in html and "Parar e continuar depois" in html
     assert "Anote seu código!" in html and "A gente não pede seu nome." in html
     assert "Voltar com o seu código" in client.get("/codigo").text
+
+
+def test_resumo_quando_nada_empolga_traz_o_que_chegou_mais_perto() -> None:
+    from app.agent.formulario import resumo_do_formulario
+
+    respostas = {"f01": "1", "f02": "3", "f03": "3", "f05": "1", "f06": "2"}
+    resumo = resumo_do_formulario(respostas)
+    assert "Respondeu 5 das 18" in resumo
+    assert "mais ou menos): organizar informações numa planilha; vender produtos" in resumo
+    assert "Nenhuma atividade foi marcada como 'tem a ver'" in resumo
+    perfil = perfil_do_formulario(respostas)
+    assert (
+        "no formulário, mais ou menos: vender produtos ou serviços" in perfil.dimensoes.E.evidencias
+    )
+
+
+def test_resumo_com_atividade_preferida_e_abertas() -> None:
+    from app.agent.formulario import resumo_do_formulario
+
+    resumo = resumo_do_formulario({"f05": "5", "f11": "4", "aberta_planos": "trabalhar logo"})
+    assert "(tudo a ver): montar um circuito eletrônico ou um robô." in resumo
+    assert "Nenhuma atividade" not in resumo
+    assert 'Depois do EM, escreveu: "trabalhar logo"' in resumo
+
+
+def test_agente_recebe_o_resumo_do_formulario(catalogo_real: Catalogo, sessoes) -> None:  # type: ignore[no-untyped-def]
+    llm = FakeProvider(respostas=["Vi que nada te animou muito. O que chegou perto foi vender."])
+    with criar_cliente(llm, catalogo_real, sessoes) as client:
+        codigo = client.post(
+            "/api/formulario", json={"respostas": {"f03": "3", "f01": "1"}}
+        ).json()["codigo"]
+        client.post("/api/chat/iniciar", json={"codigo": codigo})
+    system = llm.chamadas[0].system
+    assert "O que mais chegou perto (mais ou menos): vender produtos ou serviços" in system
+    assert 'Nunca diga que o estudante "olhou áreas"' in system
