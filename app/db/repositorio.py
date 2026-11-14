@@ -1,9 +1,11 @@
 """Operações no banco. Funções síncronas (as rotas as chamam fora do event loop)."""
 
+from collections import Counter
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Any
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -72,6 +74,33 @@ def buscar_turma(db: Session, codigo_turma: str | None) -> Turma | None:
     return turma
 
 
+def criar_turma(
+    db: Session, escola: str | None, nome: str, padlet_url: str | None, retencao_dias: int
+) -> Turma:
+    for _ in range(30):
+        codigo = codigos.gerar_codigo_turma(escola, nome)
+        if db.scalar(select(Turma.id).where(Turma.codigo_turma == codigo)) is None:
+            turma = Turma(
+                codigo_turma=codigo,
+                escola=escola or None,
+                padlet_url=padlet_url or None,
+                expira_em=agora() + timedelta(days=retencao_dias),
+            )
+            db.add(turma)
+            db.flush()
+            return turma
+    raise RuntimeError("Não foi possível gerar um código de turma único")
+
+
+def turma_existe(db: Session, turma_id: str | None) -> bool:
+    return turma_id is not None and db.get(Turma, turma_id) is not None
+
+
+def turmas_ativas(db: Session) -> list[Turma]:
+    turmas = db.scalars(select(Turma).order_by(Turma.criada_em.desc())).all()
+    return [t for t in turmas if _como_utc(t.expira_em) >= agora()]
+
+
 # ---- Formulário ------------------------------------------------------------------------
 
 
@@ -123,6 +152,80 @@ def ultima_recomendacao(participante: Participante) -> dict[str, Any] | None:
     if not participante.recomendacoes:
         return None
     return participante.recomendacoes[-1].justificativas
+
+
+# ---- Eventos agregados e painel do professor (seções 4.3 e 5.5) -----------------------
+# Nenhum evento guarda o participante: só turma, eixo, curso, tipo e tokens.
+
+
+def registrar_trilhas(
+    db: Session, turma_id: str, trilhas: list[dict[str, Any]], nova_participacao: bool
+) -> None:
+    if nova_participacao:
+        db.add(EventoAgregado(turma_id=turma_id, tipo="participacao"))
+    for t in trilhas:
+        db.add(EventoAgregado(turma_id=turma_id, tipo="trilha", eixo=t["eixo"], curso_id=t["id"]))
+
+
+def registrar_uso(db: Session, turma_id: str | None, entrada: int, saida: int) -> None:
+    if entrada or saida:
+        db.add(
+            EventoAgregado(
+                turma_id=turma_id, tipo="uso", tokens_entrada=entrada, tokens_saida=saida
+            )
+        )
+
+
+def participacoes(db: Session, turma_ids: list[str]) -> dict[str, int]:
+    if not turma_ids:
+        return {}
+    linhas = db.execute(
+        select(EventoAgregado.turma_id, func.count())
+        .where(EventoAgregado.tipo == "participacao", EventoAgregado.turma_id.in_(turma_ids))
+        .group_by(EventoAgregado.turma_id)
+    )
+    return {turma_id: total for turma_id, total in linhas if turma_id is not None}
+
+
+def tokens(db: Session, turma_id: str | None = None, todas: bool = False) -> tuple[int, int]:
+    """Tokens de uma turma, ou de tudo (com e sem turma) quando todas=True."""
+    consulta = select(
+        func.coalesce(func.sum(EventoAgregado.tokens_entrada), 0),
+        func.coalesce(func.sum(EventoAgregado.tokens_saida), 0),
+    ).where(EventoAgregado.tipo == "uso")
+    if not todas:
+        consulta = consulta.where(EventoAgregado.turma_id == turma_id)
+    entrada, saida = db.execute(consulta).one()
+    return int(entrada or 0), int(saida or 0)
+
+
+@dataclass
+class PainelTurma:
+    participantes: int
+    detalhado: bool
+    eixos: list[tuple[str, int]] = field(default_factory=list)
+    cursos: list[tuple[str, int]] = field(default_factory=list)  # (curso_id, vezes)
+    tokens_entrada: int = 0
+    tokens_saida: int = 0
+
+
+def painel_da_turma(
+    db: Session, turma_id: str, minimo_detalhe: int, max_cursos: int = 10
+) -> PainelTurma:
+    """Só contagens. Abaixo do mínimo de participantes, nem eixos nem cursos (seção 8.8)."""
+    participantes = participacoes(db, [turma_id]).get(turma_id, 0)
+    entrada, saida = tokens(db, turma_id)
+    painel = PainelTurma(participantes, participantes >= minimo_detalhe, [], [], entrada, saida)
+    if not painel.detalhado:
+        return painel
+    trilhas = db.execute(
+        select(EventoAgregado.eixo, EventoAgregado.curso_id).where(
+            EventoAgregado.turma_id == turma_id, EventoAgregado.tipo == "trilha"
+        )
+    ).all()
+    painel.eixos = Counter(e for e, _ in trilhas if e).most_common()
+    painel.cursos = Counter(c for _, c in trilhas if c).most_common(max_cursos)
+    return painel
 
 
 # ---- Retenção (seção 4.3) --------------------------------------------------------------

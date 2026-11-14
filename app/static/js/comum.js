@@ -91,6 +91,13 @@ const CF = (() => {
     }
   }
 
+  // Confere o código da turma; devolve { codigo_turma, padlet_url }.
+  async function turmaDoCodigo(codigo) {
+    const resposta = await fetch(`/api/turma/${encodeURIComponent(codigo)}`);
+    if (!resposta.ok) throw new Error(await erroDaResposta(resposta));
+    return resposta.json();
+  }
+
   async function postarJSON(url, corpo) {
     const resposta = await fetch(url, {
       method: "POST",
@@ -129,14 +136,24 @@ const CF = (() => {
       const campo = formTurma.querySelector("input");
       const status = formTurma.querySelector("[data-turma-status]");
       if (sessao.turma()) campo.value = sessao.turma();
-      formTurma.addEventListener("submit", (ev) => {
+      formTurma.addEventListener("submit", async (ev) => {
         ev.preventDefault();
         const codigo = campo.value.trim().toUpperCase();
-        sessao.salvarTurma(codigo);
-        status.textContent = codigo ? `Código ${codigo} salvo.` : "Código removido.";
+        if (!codigo) {
+          sessao.salvarTurma("");
+          status.textContent = "Código removido.";
+          return;
+        }
+        try {
+          await turmaDoCodigo(codigo);
+          sessao.salvarTurma(codigo);
+          status.textContent = `Código ${codigo} salvo.`;
+        } catch (e) {
+          status.textContent = e.message || "Não deu para conferir o código agora.";
+        }
       });
     }
   });
 
-  return { sessao, escapar, paragrafos, postarSSE, postarJSON };
+  return { sessao, escapar, paragrafos, postarSSE, postarJSON, turmaDoCodigo };
 })();

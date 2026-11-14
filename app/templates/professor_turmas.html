@@ -1,0 +1,47 @@
+{% extends "professor_base.html" %}
+
+{% block conteudo %}
+<section class="painel">
+  <div class="painel-topo">
+    <h1 class="titulo-pagina">Suas turmas</h1>
+    <form method="post" action="/professor/sair">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button class="btn btn-outline-secondary" type="submit">Sair</button>
+    </form>
+  </div>
+
+  {% if turmas %}
+  <ul class="lista-turmas">
+    {% for turma, participantes in turmas %}
+    <li>
+      <a class="cartao-turma" href="/professor/turmas/{{ turma.codigo_turma }}">
+        <span class="codigo-turma">{{ turma.codigo_turma }}</span>
+        <span>{{ turma.escola or "Escola não informada" }}</span>
+        <span class="cartao-turma-numero">{{ participantes }} {{ "participante" if participantes == 1 else "participantes" }}</span>
+      </a>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p>Nenhuma turma ainda. Crie a primeira abaixo e passe o código no quadro.</p>
+  {% endif %}
+
+  <h2 class="titulo-secao">Criar turma</h2>
+  <form class="form-painel" method="post" action="/professor/turmas">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label class="form-label" for="escola">Escola <span class="opcional">(opcional)</span></label>
+    <input class="form-control" id="escola" name="escola" maxlength="120" placeholder="ex.: EEB Guaramirim">
+    <label class="form-label" for="turma">Turma</label>
+    <input class="form-control" id="turma" name="turma" maxlength="10" required placeholder="ex.: 2B">
+    <label class="form-label" for="padlet_url">Link do mural da turma (Padlet) <span class="opcional">(opcional)</span></label>
+    <input class="form-control" id="padlet_url" name="padlet_url" type="url" maxlength="300" placeholder="https://padlet.com/...">
+    <p class="form-text">O código fica assim: 3 letras da escola, a turma e 2 caracteres, tipo GUA-2B-7K. Vale por 60 dias.</p>
+    {% if erro %}<p class="erro-formulario" role="alert">{{ erro }}</p>{% endif %}
+    <button class="btn btn-primary btn-lg" type="submit">Criar turma</button>
+  </form>
+
+  <h2 class="titulo-secao">Custo da IA</h2>
+  <p>Todas as conversas, com e sem turma: {{ "{:,}".format(tokens_entrada).replace(",", ".") }} tokens de entrada e {{ "{:,}".format(tokens_saida).replace(",", ".") }} de saída. Estimativa: <strong>US$ {{ ("%.2f"|format(custo)).replace(".", ",") }}</strong>.</p>
+  <p class="form-text">Estimativa sem o desconto do cache, então o valor real tende a ser menor. Confira o saldo e o limite de gasto no console do provedor.</p>
+</section>
+{% endblock %}

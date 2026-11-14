@@ -1,0 +1,62 @@
+{% extends "professor_base.html" %}
+
+{% block titulo_prof %}Turma {{ turma.codigo_turma }}{% endblock %}
+
+{% block conteudo %}
+<section class="painel">
+  <p><a href="/professor">← Suas turmas</a></p>
+  <h1 class="titulo-pagina">Turma <span class="codigo-turma">{{ turma.codigo_turma }}</span></h1>
+  <p class="painel-sub">{{ turma.escola or "Escola não informada" }}. Código válido até {{ turma.expira_em.strftime("%d/%m/%Y") }}.</p>
+
+  <p class="numero-destaque"><strong>{{ painel.participantes }}</strong> {{ "estudante recebeu" if painel.participantes == 1 else "estudantes receberam" }} trilhas</p>
+
+  {% if not painel.detalhado %}
+  <p class="aviso-painel">Os detalhes aparecem quando pelo menos {{ minimo }} estudantes receberem trilhas. Com menos gente, daria para adivinhar quem recebeu o quê.</p>
+  {% else %}
+  <h2 class="titulo-secao">Eixos mais sugeridos</h2>
+  <ul class="barras">
+    {% for eixo, vezes in painel.eixos %}
+    <li class="barra">
+      <span class="barra-rotulo">{{ eixo }}</span>
+      <span class="barra-trilho" aria-hidden="true"><span class="barra-valor cor-{{ loop.index0 % 6 }} w-{{ [(vezes / maximo_eixo * 20)|round|int, 1]|max * 5 }}"></span></span>
+      <span class="barra-numero">{{ vezes }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+
+  <h2 class="titulo-secao">Cursos mais sugeridos</h2>
+  <ul class="barras">
+    {% for nome, vezes in cursos %}
+    <li class="barra">
+      <span class="barra-rotulo">{{ nome }}</span>
+      <span class="barra-trilho" aria-hidden="true"><span class="barra-valor cor-0 w-{{ [(vezes / maximo_curso * 20)|round|int, 1]|max * 5 }}"></span></span>
+      <span class="barra-numero">{{ vezes }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+  <p class="form-text">Cada estudante recebe 3 trilhas e pode pedir outras, então a soma passa do número de participantes.</p>
+
+  <h2 class="titulo-secao">Para puxar a roda de conversa</h2>
+  {% for titulo, lista in perguntas %}
+  <h3 class="subtitulo-roda">{{ titulo }}</h3>
+  <ul class="perguntas-roda">
+    {% for pergunta in lista %}<li>{{ pergunta }}</li>{% endfor %}
+  </ul>
+  {% endfor %}
+  {% endif %}
+
+  <h2 class="titulo-secao">Mural da turma</h2>
+  <form class="form-painel" method="post" action="/professor/turmas/{{ turma.codigo_turma }}/padlet">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label class="form-label" for="padlet_url">Link do Padlet</label>
+    <input class="form-control" id="padlet_url" name="padlet_url" type="url" maxlength="300"
+           value="{{ turma.padlet_url or '' }}" placeholder="https://padlet.com/...">
+    <p class="form-text">Aparece como botão "Abrir mural da turma" no resultado de quem usou este código. Deixe vazio para tirar.</p>
+    {% if erro %}<p class="erro-formulario" role="alert">{{ erro }}</p>{% endif %}
+    <button class="btn btn-outline-primary" type="submit">Salvar link</button>
+  </form>
+
+  <h2 class="titulo-secao">Custo da IA nesta turma</h2>
+  <p>{{ "{:,}".format(painel.tokens_entrada).replace(",", ".") }} tokens de entrada e {{ "{:,}".format(painel.tokens_saida).replace(",", ".") }} de saída. Estimativa: <strong>US$ {{ ("%.2f"|format(custo)).replace(".", ",") }}</strong>.</p>
+</section>
+{% endblock %}

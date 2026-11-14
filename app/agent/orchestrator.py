@@ -110,6 +110,10 @@ class Sessao(BaseModel):
     id: str = Field(default_factory=lambda: secrets.token_urlsafe(12))
     # Quem entrou com código: o perfil e as trilhas são salvos para essa pessoa (Fase 4).
     participante_id: str | None = None
+    # Turma (código opcional do professor) e se esta conversa já contou como participação.
+    # Só alimentam contagens do painel; nada liga o evento à conversa.
+    turma_id: str | None = None
+    contabilizada: bool = False
     estado: Estado = Estado.BOAS_VINDAS
     perfil: Perfil = Perfil()
     historico: list[MensagemSessao] = []  # já mascarado; fica só no navegador (token)

@@ -106,5 +106,9 @@ class EventoAgregado(Base):
     )
     eixo: Mapped[str | None] = mapped_column(String(80))
     curso_id: Mapped[str | None] = mapped_column(String(120))
-    tipo: Mapped[str] = mapped_column(String(30))
+    # "participacao" (1 por conversa que chegou às trilhas), "trilha" (1 por curso sugerido)
+    # ou "uso" (tokens gastos numa resposta; também sem turma, para o custo total).
+    tipo: Mapped[str] = mapped_column(String(30), index=True)
+    tokens_entrada: Mapped[int | None] = mapped_column(Integer)
+    tokens_saida: Mapped[int | None] = mapped_column(Integer)
     criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=agora, index=True)

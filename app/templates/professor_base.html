@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block titulo %}{% block titulo_prof %}Painel do professor{% endblock %} · Conexão Futuro{% endblock %}
+{% block classe_corpo %}pagina pagina-professor{% endblock %}
+
+{% block rodape %}
+<footer class="rodape">
+  <p><strong>O Conexão Futuro é uma inteligência artificial.</strong> Este painel mostra só números da turma, nunca o que cada estudante respondeu.</p>
+  <p>Cursos do Catálogo Nacional de Cursos Técnicos, {{ edicao_cnct }}.</p>
+  <p><a href="/privacidade">Aviso de privacidade</a></p>
+</footer>
+{% endblock %}

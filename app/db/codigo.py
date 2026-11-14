@@ -10,6 +10,7 @@ import hashlib
 import hmac
 import re
 import secrets
+import unicodedata
 
 # Palavras curtas, fáceis de ler em voz alta, sem acento (fáceis de digitar no celular),
 # sem duplo sentido e sem letras que se confundem com números.
@@ -46,3 +47,47 @@ def normalizar(texto: str) -> str | None:
 
 def hash_do_codigo(codigo: str, chave: bytes) -> str:
     return hmac.new(chave, codigo.encode(), hashlib.sha256).hexdigest()
+
+
+# ---- Código da turma (ex.: GUA-2B-7K) ---------------------------------------------------
+
+# Sem 0/O, 1/I/L e 5/S: o código vai para o quadro e é copiado à mão.
+_ALFABETO_TURMA = "ABCDEFGHJKMNPQRTUVWXYZ2346789"
+# Palavras que não ajudam a reconhecer a escola ("EEB Prof. Fulano" vira FUL).
+_PALAVRAS_GENERICAS = {
+    "E", "EE", "EEB", "EEF", "EEM", "EEEM", "EMEF", "CE", "IF", "IFSC", "ESCOLA", "ESTADUAL",
+    "MUNICIPAL", "COLEGIO", "CENTRO", "EDUCACIONAL", "INSTITUTO", "FEDERAL", "ENSINO",
+    "MEDIO", "BASICA", "DE", "DA", "DO", "DAS", "DOS", "PROF", "PROFA", "PROFESSOR",
+    "PROFESSORA", "DR", "DONA", "EDUCACAO", "FUNDAMENTAL", "TECNICO", "TECNICA", "SENAI", "SESI",
+}  # fmt: skip
+_RE_CODIGO_TURMA = re.compile(r"^[A-Z]{2,3}-[A-Z0-9]{1,4}-[A-Z0-9]{2}$")
+
+
+def _sem_acento(texto: str) -> str:
+    return "".join(
+        c for c in unicodedata.normalize("NFKD", texto) if not unicodedata.combining(c)
+    ).upper()
+
+
+def prefixo_escola(escola: str | None) -> str:
+    palavras = re.findall(r"[A-Z]+", _sem_acento(escola or ""))
+    for palavra in palavras:
+        if palavra not in _PALAVRAS_GENERICAS and len(palavra) >= 3:
+            return palavra[:3]
+    return "CF"
+
+
+def nome_da_turma(turma: str) -> str | None:
+    """'2º B' -> '2B'. Só letras e números, até 4 caracteres."""
+    limpo = re.sub(r"[^A-Z0-9]", "", _sem_acento(turma.replace("º", "").replace("ª", "")))
+    return limpo[:4] or None
+
+
+def gerar_codigo_turma(escola: str | None, turma: str) -> str:
+    nome = nome_da_turma(turma) or "T"
+    sufixo = "".join(secrets.choice(_ALFABETO_TURMA) for _ in range(2))
+    return f"{prefixo_escola(escola)}-{nome}-{sufixo}"
+
+
+def codigo_turma_valido(texto: str) -> bool:
+    return bool(_RE_CODIGO_TURMA.match(texto.strip().upper()))

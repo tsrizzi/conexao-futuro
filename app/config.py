@@ -67,6 +67,12 @@ class Settings(BaseSettings):
     cobertura_minima: float = 0.7
     log_conversas: bool = False
 
+    # Painel do professor (seção 8.8): abaixo disto, a turma mostra só a contagem.
+    painel_minimo_detalhe: int = 5
+    # Estimativa de custo no painel, em US$ por milhão de tokens (padrão: Claude Haiku 4.5).
+    llm_preco_entrada_mtok: float = 1.0
+    llm_preco_saida_mtok: float = 5.0
+
     @model_validator(mode="after")
     def _bloqueia_gemini_em_producao(self) -> "Settings":
         if self.app_env == AppEnv.PRODUCTION and self.llm_provider == LLMProviderName.GEMINI:

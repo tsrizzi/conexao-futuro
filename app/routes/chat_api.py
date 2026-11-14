@@ -50,6 +50,7 @@ class PedidoMensagem(PedidoToken):
 
 class PedidoInicio(BaseModel):
     codigo: str | None = Field(default=None, max_length=30)
+    codigo_turma: str | None = Field(default=None, max_length=20)
 
 
 class PedidoResultado(BaseModel):
@@ -80,20 +81,45 @@ def _sse(tipo: str, dados: dict[str, Any]) -> str:
     return f"event: {tipo}\ndata: {json.dumps(dados, ensure_ascii=False)}\n\n"
 
 
-def _persistir(request: Request, sessao: Sessao, exibicao: dict[str, Any] | None) -> None:
-    """Para quem tem código: guarda o perfil estruturado e as trilhas. Nunca o texto."""
-    assert sessao.participante_id is not None
+def _persistir(
+    request: Request, sessao: Sessao, exibicao: dict[str, Any] | None, uso: tuple[int, int]
+) -> None:
+    """Grava o que pode ser gravado. Nunca o texto da conversa.
+
+    - Quem tem código: o perfil estruturado e as trilhas.
+    - Painel do professor: eventos agregados (participação, cursos sugeridos, tokens).
+    """
     with request.app.state.sessoes.begin() as db:
-        if sessao.estado != "acolhimento":
-            repositorio.salvar_perfil(db, sessao.participante_id, sessao.perfil)
-        if exibicao is not None:
-            repositorio.salvar_recomendacao(db, sessao.participante_id, exibicao)
+        if sessao.participante_id:
+            if sessao.estado != "acolhimento":
+                repositorio.salvar_perfil(db, sessao.participante_id, sessao.perfil)
+            if exibicao is not None:
+                repositorio.salvar_recomendacao(db, sessao.participante_id, exibicao)
+        # A turma pode ter expirado no meio da conversa: aí o evento fica sem turma.
+        turma_id = sessao.turma_id if repositorio.turma_existe(db, sessao.turma_id) else None
+        contou = False
+        if turma_id is not None and exibicao is not None:
+            contou = True
+            repositorio.registrar_trilhas(
+                db, turma_id, exibicao["trilhas"], not sessao.contabilizada
+            )
+        repositorio.registrar_uso(db, turma_id, *uso)
+    # Só depois do commit: se a gravação falhar, a próxima recomendação ainda conta.
+    if contou:
+        sessao.contabilizada = True
+
+
+def _tokens(sessao: Sessao) -> tuple[int, int]:
+    """(entrada, saída). A entrada inclui a parte lida/gravada no cache do prompt."""
+    u = sessao.uso
+    return u.input_tokens + u.cache_read_tokens + u.cache_write_tokens, u.output_tokens
 
 
 async def _transmitir(
     request: Request, sessao: Sessao, fluxo: AsyncIterator[Evento]
 ) -> AsyncIterator[str]:
     exibicao = None
+    antes = _tokens(sessao)
     try:
         async for evento in fluxo:
             tipo, dados = serializar(evento)
@@ -104,11 +130,12 @@ async def _transmitir(
         # Sem o texto da conversa no log: só o tipo do erro e o traceback do código.
         log.exception("Erro ao responder no chat")
         yield _sse("erro", {"texto": MENSAGEM_SOBRECARGA})
-    if sessao.participante_id:
-        try:
-            await asyncio.to_thread(_persistir, request, sessao, exibicao)
-        except Exception:
-            log.exception("Erro ao salvar perfil/trilhas do participante")
+    depois = _tokens(sessao)
+    uso = (depois[0] - antes[0], depois[1] - antes[1])
+    try:
+        await asyncio.to_thread(_persistir, request, sessao, exibicao, uso)
+    except Exception:
+        log.exception("Erro ao salvar perfil, trilhas ou eventos agregados")
     yield _sse("sessao", {"token": assinar(sessao, request.app.state.chave)})
     yield _sse("fim", {})
 
@@ -136,7 +163,17 @@ async def _apenas_aviso(texto: str) -> AsyncIterator[Evento]:
     yield EventoAviso(texto)
 
 
-def _sessao_do_codigo(request: Request, codigo: str) -> tuple[Sessao, Any, str]:
+def _turma_id(request: Request, codigo_turma: str | None) -> str | None:
+    if not codigo_turma:
+        return None
+    with request.app.state.sessoes.begin() as db:
+        turma = repositorio.buscar_turma(db, codigo_turma)
+        return turma.id if turma else None
+
+
+def _sessao_do_codigo(
+    request: Request, codigo: str, codigo_turma: str | None
+) -> tuple[Sessao, Any, str]:
     """Começa a conversa a partir do que o participante já respondeu (CARREGA_FORMULARIO)."""
     contar_tentativa(request)
     with request.app.state.sessoes.begin() as db:
@@ -145,7 +182,12 @@ def _sessao_do_codigo(request: Request, codigo: str) -> tuple[Sessao, Any, str]:
             raise HTTPException(status_code=404, detail=MENSAGEM_CODIGO_INVALIDO)
         respostas = repositorio.respostas_de(participante)
         perfil = repositorio.perfil_de(participante) or perfil_do_formulario(respostas)
-        return Sessao(participante_id=participante.id), perfil, resumo_do_formulario(respostas)
+        turma = repositorio.buscar_turma(db, codigo_turma)
+        sessao = Sessao(
+            participante_id=participante.id,
+            turma_id=turma.id if turma else participante.turma_id,
+        )
+        return sessao, perfil, resumo_do_formulario(respostas)
 
 
 @router.post("/chat/iniciar")
@@ -153,12 +195,15 @@ async def iniciar(request: Request, pedido: PedidoInicio | None = None) -> Strea
     if not request.app.state.limite_inicio.permitir(_ip(request)):
         raise HTTPException(status_code=429, detail=carregar("msg_limite"))
     orquestrador: Orquestrador = request.app.state.orquestrador
+    codigo_turma = pedido.codigo_turma if pedido else None
     if pedido and pedido.codigo:
-        sessao, perfil, resumo = await asyncio.to_thread(_sessao_do_codigo, request, pedido.codigo)
+        sessao, perfil, resumo = await asyncio.to_thread(
+            _sessao_do_codigo, request, pedido.codigo, codigo_turma
+        )
         tem_perfil = perfil.cobertura > 0 or perfil.interesses or perfil.atividades_que_gosta
         fluxo = orquestrador.iniciar(sessao, perfil if tem_perfil else None, resumo)
         return _stream(request, sessao, fluxo)
-    sessao = Sessao()
+    sessao = Sessao(turma_id=await asyncio.to_thread(_turma_id, request, codigo_turma))
     return _stream(request, sessao, orquestrador.iniciar(sessao))
 
 

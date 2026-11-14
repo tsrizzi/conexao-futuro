@@ -218,6 +218,10 @@
     CF.sessao.limpar();
     historico = [];
     const codigo = CF.sessao.codigo();
-    conversar("/api/chat/iniciar", codigo ? { codigo } : {});
+    const turma = CF.sessao.turma();
+    const corpo = {};
+    if (codigo) corpo.codigo = codigo;
+    if (turma) corpo.codigo_turma = turma;  // só para os números agregados do professor
+    conversar("/api/chat/iniciar", corpo);
   }
 })();

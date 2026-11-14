@@ -136,7 +136,22 @@
     window.print();
   }
 
+  // Botão do mural, se a turma tiver um link configurado pelo professor.
+  async function mostrarPadlet() {
+    const turma = CF.sessao.turma();
+    if (!turma) return;
+    try {
+      const dados = await CF.turmaDoCodigo(turma);
+      const url = dados.padlet_url || "";
+      if (!url.startsWith("https://")) return;
+      const botao = raiz.querySelector("[data-padlet]");
+      botao.href = url;
+      botao.hidden = false;
+    } catch (e) { /* sem mural, sem botão */ }
+  }
+
   async function iniciar() {
+    mostrarPadlet();
     raiz.querySelector("[data-copiar]").addEventListener("click", copiar);
     raiz.querySelector("[data-baixar-txt]").addEventListener("click", baixarTxt);
     raiz.querySelector("[data-baixar-pdf]").addEventListener("click", baixarPdf);

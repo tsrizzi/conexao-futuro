@@ -22,8 +22,8 @@ uv run python -m uvicorn app.main:app --reload
 uv run python scripts/verificar_interface.py
 ```
 
-Sobe o app com um LLM falso, percorre início -> conversa -> trilhas -> resultado no Chrome
-headless (temas claro e escuro), roda o axe-core e salva capturas em `.cache/capturas/`.
+Sobe o app com um LLM falso, percorre início -> conversa -> trilhas -> resultado e o painel do professor
+no Chrome headless (temas claro e escuro), roda o axe-core e salva capturas em `.cache/capturas/`.
 O Lighthouse completo: abra o site no Chrome, F12 -> Lighthouse -> Acessibilidade.
 
 Sem chave de API, dá para desenvolver com custo zero usando `LLM_PROVIDER=fake` (respostas de
@@ -70,6 +70,21 @@ mudar, os códigos antigos param de funcionar.
 uv run python -m alembic upgrade head          # migrar à mão (normalmente não precisa)
 uv run python scripts/limpar_expirados.py      # retenção (o app já roda a cada 24 h)
 ```
+
+## Painel do professor
+
+Em `/professor`. Crie a senha e coloque o hash (nunca a senha) no `.env`:
+
+```bash
+uv run python scripts/gerar_hash_professor.py   # imprime PROFESSOR_PASSWORD_HASH='...'
+```
+
+No painel, o professor cria a turma (escola + turma -> código tipo `GUA-2B-7K`, que vai no
+quadro) e, opcionalmente, o link do Padlet, que aparece no resultado dos estudantes. Por turma,
+o painel mostra só números: quantos receberam trilhas, eixos e cursos mais sugeridos, perguntas
+para a roda de conversa (`data/roda_conversa.yaml`, editável) e o custo estimado da IA. Turmas
+com menos de `PAINEL_MINIMO_DETALHE` (5) participantes mostram só a contagem. Os eventos não
+têm nenhuma ligação com o estudante.
 
 ## Testes e lint
 

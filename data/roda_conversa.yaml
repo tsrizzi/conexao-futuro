@@ -1,0 +1,49 @@
+# Perguntas para o professor puxar a roda de conversa (painel, seção 5.5).
+# "gerais" aparecem sempre; "por_eixo" aparecem para os 3 eixos mais sugeridos da turma.
+# Os nomes dos eixos precisam ser iguais aos do CNCT (data/cnct.json).
+# Pode editar à vontade: não precisa mudar código.
+
+gerais:
+  - "Alguma sugestão surpreendeu você? Por quê?"
+  - "O que a IA acertou sobre você, e o que ela errou?"
+  - "Que informação faltou para a sugestão ser mais justa com você?"
+  - "Você conhece alguém que trabalha numa dessas áreas? Dá para conversar com essa pessoa?"
+  - "Escolher um curso técnico agora fecha alguma porta? Ou abre?"
+
+por_eixo:
+  "Informação e Comunicação":
+    - "Muita gente gosta de usar tecnologia. O que muda quando você passa a criar a tecnologia?"
+    - "Programar dá para aprender sozinho na internet. Para que serve um curso técnico, então?"
+  "Ambiente e Saúde":
+    - "Cuidar de pessoas é bonito, mas cansa. Como você lida com dias difíceis?"
+    - "Quais profissões de saúde existem aqui na região além das que aparecem na TV?"
+  "Produção Cultural e Design":
+    - "Dá para viver de criatividade? O que vocês já viram de gente que vive?"
+    - "Qual a diferença entre fazer algo bonito e fazer algo que resolve o problema de alguém?"
+  "Controle e Processos Industriais":
+    - "Quais indústrias da nossa região usam automação e eletrônica?"
+    - "Você prefere montar e consertar ou planejar e programar a máquina?"
+  "Gestão e Negócios":
+    - "Toda empresa precisa de gestão. Que empresa daqui você gostaria de ver por dentro?"
+    - "Empreender e trabalhar numa empresa: o que cada um pede de você?"
+  "Produção Industrial":
+    - "O que é produzido nas fábricas da região? Quem trabalha nelas?"
+    - "Trabalhar em turno e com regras de segurança combina com o seu jeito?"
+  "Infraestrutura":
+    - "Olhe pela janela: quem projetou e construiu o que você está vendo?"
+    - "Trabalhar ao ar livre, em obra, é um ponto a favor ou contra para você?"
+  "Recursos Naturais":
+    - "O campo hoje usa drone, sensor e computador. Isso muda a sua ideia sobre trabalhar nele?"
+    - "Que produção rural ou ambiental existe perto da nossa cidade?"
+  "Produção Alimentícia":
+    - "De onde vem o que a gente come no lanche da escola? Quem garante que é seguro?"
+    - "Gosto de cozinhar é a mesma coisa que gostar de trabalhar com alimentos?"
+  "Desenvolvimento Educacional e Social":
+    - "Que profissionais, além de professores, fazem uma escola funcionar?"
+    - "Ajudar pessoas é o que te move? De que jeito você gosta de ajudar?"
+  "Segurança":
+    - "Segurança do trabalho evita acidentes. Você já viu alguma situação de risco que podia ser evitada?"
+    - "Ser a pessoa que diz 'assim não pode' é confortável para você?"
+  "Turismo, Hospitalidade e Lazer":
+    - "O que a nossa região tem para mostrar a quem vem de fora?"
+    - "Atender gente o dia inteiro: energia ou cansaço?"

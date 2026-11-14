@@ -15,7 +15,7 @@ from app.agent.orchestrator import Orquestrador
 from app.config import AppEnv, Settings, get_settings
 from app.llm.base import LLMProvider
 from app.llm.factory import criar_provedor
-from app.routes import acesso_api, chat_api, health, paginas
+from app.routes import acesso_api, chat_api, health, paginas, professor
 from app.safety.limites import LimitadorTaxa
 
 log = logging.getLogger(__name__)
@@ -109,6 +109,8 @@ def create_app(
     app.state.limite_inicio = LimitadorTaxa(maximo=30, janela_s=600)  # por IP
     app.state.limite_codigo = LimitadorTaxa(maximo=10, janela_s=600)  # força bruta, por IP
     app.state.limite_criacao = LimitadorTaxa(maximo=20, janela_s=600)  # novos códigos, por IP
+    app.state.limite_login = LimitadorTaxa(maximo=5, janela_s=600)  # painel, por IP
+    app.state.limite_turma = LimitadorTaxa(maximo=200, janela_s=600)  # consulta de turma, por IP
     app.state.sessoes = sessoes
     app.state.edicao_cnct = ""
     app.state.total_cursos = 0
@@ -134,6 +136,7 @@ def create_app(
     app.include_router(paginas.router)
     app.include_router(chat_api.router)
     app.include_router(acesso_api.router)
+    app.include_router(professor.router)
     return app
 
 

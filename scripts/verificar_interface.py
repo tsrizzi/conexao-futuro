@@ -42,6 +42,7 @@ from app.db.session import criar_engine, fabrica_de_sessoes  # noqa: E402
 from app.llm.fake import FakeProvider  # noqa: E402
 from app.main import create_app  # noqa: E402
 from app.rag.catalog import Catalogo  # noqa: E402
+from app.web.professor_sessao import gerar_hash  # noqa: E402
 from tests.agente_fake import BuscadorFixo, analise, dimensoes, recomendacao  # noqa: E402
 
 CHROMES = [
@@ -53,6 +54,7 @@ CHROMES = [
 AXE = "https://cdn.jsdelivr.net/npm/axe-core@4.10.2/axe.min.js"
 SAIDA = RAIZ / ".cache" / "capturas"
 LARGURA, ALTURA = 360, 780
+SENHA_DEMO = "senha-de-demonstracao"
 
 
 def app_demo() -> Any:
@@ -83,12 +85,68 @@ def app_demo() -> Any:
     )
     catalogo = Catalogo.carregar()
     orq = Orquestrador(llm, catalogo, BuscadorFixo(catalogo), Ofertas([]))
-    config = Settings(_env_file=None, llm_provider="fake", secret_key="d" * 32)  # type: ignore[call-arg, arg-type]
+    config = Settings(
+        _env_file=None,  # type: ignore[call-arg]
+        llm_provider="fake",  # type: ignore[arg-type]
+        secret_key="d" * 32,  # type: ignore[arg-type]
+        professor_password_hash=gerar_hash(SENHA_DEMO),  # type: ignore[arg-type]
+    )
     # Arquivo temporário (o SQLite em memória não aguenta requisições simultâneas).
     banco = Path(tempfile.mkdtemp(prefix="cf-banco-")) / "demo.db"
     engine = criar_engine(f"sqlite:///{banco.as_posix()}")
     Base.metadata.create_all(engine)
-    return create_app(config, llm=llm, orquestrador=orq, sessoes=fabrica_de_sessoes(engine))
+    sessoes = fabrica_de_sessoes(engine)
+    turma_demo(sessoes)
+    return create_app(config, llm=llm, orquestrador=orq, sessoes=sessoes)
+
+
+def turma_demo(sessoes: Any) -> None:
+    """Uma turma com 7 participantes e uma com 2 (abaixo do mínimo), para o painel."""
+    from app.db import repositorio
+
+    eixos = {
+        "tecnico-em-informatica": "Informação e Comunicação",
+        "tecnico-em-programacao-de-jogos-digitais": "Informação e Comunicação",
+        "tecnico-em-design-grafico": "Produção Cultural e Design",
+        "tecnico-em-enfermagem": "Ambiente e Saúde",
+        "tecnico-em-mecatronica": "Controle e Processos Industriais",
+        "tecnico-em-administracao": "Gestão e Negócios",
+    }
+    ids = list(eixos)
+    with sessoes.begin() as db:
+        cheia = repositorio.criar_turma(db, "EEB Guaramirim", "2B", "https://padlet.com/x", 60)
+        pequena = repositorio.criar_turma(db, "EEB Guaramirim", "2C", None, 60)
+        for i in range(7):
+            trilhas = [{"id": c, "eixo": eixos[c]} for c in (ids[i % 6], ids[(i + 1) % 6], ids[0])]
+            repositorio.registrar_trilhas(db, cheia.id, trilhas, nova_participacao=True)
+            repositorio.registrar_uso(db, cheia.id, 40_000, 6_000)
+        for _ in range(2):
+            repositorio.registrar_trilhas(db, pequena.id, [], nova_participacao=True)
+
+
+async def percorrer_professor(cdp: "CDP", base: str, tema: str, achados: dict[str, Any]) -> None:
+    # Sai da sessão da passada anterior (o cookie fica no navegador) para ver o login.
+    await cdp("Network.clearBrowserCookies")
+    await cdp.abrir(f"{base}/professor")
+    await cdp.captura(f"{tema}-8-professor-login", inteira=False)
+    await checar(cdp, f"{tema}/professor-login", achados)
+    await cdp.js(
+        f"{{ document.querySelector('#senha').value = {json.dumps(SENHA_DEMO)}; "
+        "document.querySelector('form').submit(); }"
+    )
+    await cdp.esperar(
+        "document.readyState === 'complete' && document.querySelector('.lista-turmas')"
+    )
+    await cdp.captura(f"{tema}-9-professor-turmas")
+    await checar(cdp, f"{tema}/professor-turmas", achados)
+    for posicao, nome in ((1, "turma"), (0, "turma-pequena")):
+        await cdp.abrir(f"{base}/professor")
+        await cdp.js(f"document.querySelectorAll('.cartao-turma')[{posicao}].click()")
+        await cdp.esperar(
+            "document.readyState === 'complete' && document.querySelector('.numero-destaque')"
+        )
+        await cdp.captura(f"{tema}-10-professor-{nome}")
+        await checar(cdp, f"{tema}/professor-{nome}", achados)
 
 
 def porta_livre() -> int:
@@ -280,6 +338,7 @@ async def principal() -> int:
             )
             for tema in ("light", "dark"):
                 await percorrer(cdp, f"http://127.0.0.1:{porta_app}", tema, achados)
+                await percorrer_professor(cdp, f"http://127.0.0.1:{porta_app}", tema, achados)
     finally:
         processo.terminate()
         servidor.should_exit = True

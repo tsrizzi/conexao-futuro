@@ -670,3 +670,67 @@ main:focus { outline: none; }
     -webkit-print-color-adjust: exact;
   }
 }
+
+/* ---- Painel do professor ------------------------------------------------------------ */
+
+.painel { max-width: var(--coluna); margin: 0 auto; }
+.painel-topo { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+.painel-sub { color: var(--cf-tinta-suave); }
+.opcional { font-weight: 400; color: var(--cf-tinta-suave); }
+
+.form-painel { display: grid; gap: 0.4rem; max-width: 28rem; margin-bottom: 1.5rem; }
+.form-painel .form-label { margin: 0.5rem 0 0; font-weight: 700; }
+.form-painel .btn { justify-self: start; margin-top: 0.5rem; }
+
+.codigo-turma { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-weight: 700; letter-spacing: 0.04em; }
+
+.lista-turmas { list-style: none; padding: 0; margin: 1rem 0 2rem; display: grid; gap: 0.6rem; }
+.cartao-turma {
+  display: grid; gap: 0.15rem; padding: 0.9rem 1rem;
+  background: var(--cf-superficie); border: 1px solid var(--cf-borda); border-radius: 0.75rem;
+  color: var(--cf-tinta); text-decoration: none;
+}
+.cartao-turma:hover, .cartao-turma:focus-visible { border-color: var(--cf-acao); }
+.cartao-turma .codigo-turma { font-size: 1.15rem; color: var(--cf-acao); }
+.cartao-turma-numero { color: var(--cf-tinta-suave); }
+
+.numero-destaque { font-size: 1.25rem; margin: 1rem 0; }
+.numero-destaque strong { font-family: var(--fonte-titulo); font-size: 2.5rem; margin-right: 0.25rem; }
+.aviso-painel { color: var(--cf-alerta); font-weight: 700; max-width: 34rem; }
+
+.barras { list-style: none; padding: 0; margin: 0 0 1rem; display: grid; gap: 0.7rem; }
+.barra { display: grid; grid-template-columns: 1fr auto; gap: 0.2rem 0.75rem; align-items: center; }
+.barra-rotulo { grid-column: 1 / -1; font-weight: 700; overflow-wrap: anywhere; }
+.barra-trilho { height: 0.85rem; background: var(--cf-borda); border-radius: 999px; overflow: hidden; }
+.barra-valor { display: block; height: 100%; border-radius: 999px; }
+.barra-numero { font-weight: 700; min-width: 2ch; text-align: right; }
+.barra-valor.cor-0 { background: var(--linha-0); }
+.barra-valor.cor-1 { background: var(--linha-1); }
+.barra-valor.cor-2 { background: var(--linha-2); }
+.barra-valor.cor-3 { background: var(--linha-3); }
+.barra-valor.cor-4 { background: var(--linha-4); }
+.barra-valor.cor-5 { background: var(--linha-5); }
+.w-5 { width: 5%; }
+.w-10 { width: 10%; }
+.w-15 { width: 15%; }
+.w-20 { width: 20%; }
+.w-25 { width: 25%; }
+.w-30 { width: 30%; }
+.w-35 { width: 35%; }
+.w-40 { width: 40%; }
+.w-45 { width: 45%; }
+.w-50 { width: 50%; }
+.w-55 { width: 55%; }
+.w-60 { width: 60%; }
+.w-65 { width: 65%; }
+.w-70 { width: 70%; }
+.w-75 { width: 75%; }
+.w-80 { width: 80%; }
+.w-85 { width: 85%; }
+.w-90 { width: 90%; }
+.w-95 { width: 95%; }
+.w-100 { width: 100%; }
+
+.subtitulo-roda { font-size: 1.05rem; margin: 1rem 0 0.4rem; }
+.perguntas-roda { padding-left: 1.2rem; }
+.perguntas-roda li { margin-bottom: 0.35rem; }
