@@ -65,8 +65,10 @@ formulário e o chat. É uma porta de entrada: troca "login e senha" por um cód
 - O servidor confere a liberação, e se o código ainda vale (não revogado, dentro do período),
   em toda chamada que grava ou gasta: iniciar conversa, mensagem, formulário, voltar com
   código de acesso, resultado. Revogar ou terminar o período corta na próxima mensagem.
-- Força bruta: 10 códigos errados por IP a cada 10 min (só os errados contam, como no código
-  de acesso do estudante).
+- Força bruta: 50 códigos errados por IP a cada 10 min. Só contam palpites (código bem formado
+  que não existe); erro de digitação não conta. Ajustado na revisão final: com 10, uma sala
+  inteira atrás do mesmo IP se trancava para fora em segundos. Com 29^8 combinações, 50 segue
+  inviável para adivinhar.
 - Ficam abertos: aviso de privacidade, `/health`, painel do professor (tem a própria senha) e
   `/admin` (tem login).
 

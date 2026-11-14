@@ -50,6 +50,10 @@ def test_codigo_entrada_formato() -> None:
         (" K7MQ 3XPT ", "K7MQ-3XPT"),
         ("k7mq3xpt", "K7MQ-3XPT"),
         ("K7MQ.3XPT", "K7MQ-3XPT"),
+        ("K7MQ–3XPT", "K7MQ-3XPT"),  # meia-risca (teclado com pontuação "inteligente")
+        ("K7MQ—3XPT", "K7MQ-3XPT"),  # travessão (colado do WhatsApp ou de um documento)
+        ("K7MQ−3XPT", "K7MQ-3XPT"),  # sinal de menos
+        ("K7MQ－3XPT", "K7MQ-3XPT"),  # hífen de largura cheia
         ("", None),
         ("K7MQ-3XP", None),
         ("K7MQ-3XP0", None),
@@ -239,9 +243,19 @@ def test_forca_bruta_so_conta_erros(catalogo_real, sessoes) -> None:  # type: ig
     with cliente(catalogo_real, sessoes) as client:
         for _ in range(30):
             assert client.post("/api/entrada", json={"codigo": codigo}).status_code == 200
-        for _ in range(10):
+        # Uma turma inteira sai pelo mesmo IP: o limite de códigos errados é por sala.
+        for _ in range(50):
             assert client.post("/api/entrada", json={"codigo": "ZZZZ-ZZZZ"}).status_code == 404
         assert client.post("/api/entrada", json={"codigo": codigo}).status_code == 429
+
+
+def test_digitacao_malformada_nao_conta_no_limite(catalogo_real, sessoes) -> None:  # type: ignore[no-untyped-def]
+    """Erro de digitação (formato inválido) não pode ser palpite: não tranca a sala."""
+    _, codigo = criar(sessoes)
+    with cliente(catalogo_real, sessoes) as client:
+        for texto in ["K7MQ-3XP", "k7mq 3xp0", "abc", "K7MQ-3XPTA"] * 20:
+            assert client.post("/api/entrada", json={"codigo": texto}).status_code == 404
+        assert client.post("/api/entrada", json={"codigo": codigo}).status_code == 200
 
 
 def test_liberacao_dura_no_maximo_12h() -> None:

@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 
 from app.config import AppEnv
 from app.db import repositorio
+from app.db.codigo import normalizar_codigo_entrada
 from app.routes.acesso_api import MENSAGEM_TENTATIVAS, ip
 from app.web.entrada import (
     COOKIE_ENTRADA,
@@ -25,7 +26,9 @@ class PedidoEntrada(BaseModel):
 
 @router.post("/entrada")
 def entrar(request: Request, pedido: PedidoEntrada) -> JSONResponse:
-    """Só códigos não encontrados contam no limite (10 por IP a cada 10 min)."""
+    """Só palpites contam no limite: código bem formado que não existe (50 por IP a cada 10
+    min, uma sala inteira sai pelo mesmo IP). Erro de digitação (formato inválido) não pode
+    acertar nada, então não conta."""
     estado = request.app.state
     chave_ip = ip(request)
     if estado.limite_entrada.bloqueado(chave_ip):
@@ -33,7 +36,8 @@ def entrar(request: Request, pedido: PedidoEntrada) -> JSONResponse:
     with estado.sessoes.begin() as db:
         registro = repositorio.buscar_codigo_entrada(db, pedido.codigo, estado.chave)
         if registro is None:
-            estado.limite_entrada.registrar(chave_ip)
+            if normalizar_codigo_entrada(pedido.codigo) is not None:
+                estado.limite_entrada.registrar(chave_ip)
             raise HTTPException(status_code=404, detail=MENSAGEM_INVALIDO)
         situacao = repositorio.situacao_codigo(registro)
         if situacao != "ativo":

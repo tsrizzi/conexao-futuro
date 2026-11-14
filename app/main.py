@@ -113,7 +113,8 @@ def create_app(
     app.state.limite_criacao = LimitadorTaxa(maximo=100, janela_s=600)  # novos códigos, por IP
     app.state.limite_login = LimitadorTaxa(maximo=5, janela_s=600)  # painel, por IP
     app.state.limite_admin = LimitadorTaxa(maximo=5, janela_s=600)  # admin, por IP
-    app.state.limite_entrada = LimitadorTaxa(maximo=10, janela_s=600)  # códigos ERRADOS, por IP
+    # Códigos de entrada ERRADOS (bem formados), por IP: 50 para caber uma sala inteira.
+    app.state.limite_entrada = LimitadorTaxa(maximo=50, janela_s=600)
     app.state.limite_turma = LimitadorTaxa(maximo=200, janela_s=600)  # consulta de turma, por IP
     app.state.sessoes = sessoes
     app.state.edicao_cnct = ""

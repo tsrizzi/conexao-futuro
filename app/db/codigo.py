@@ -99,6 +99,10 @@ def codigo_turma_valido(texto: str) -> bool:
 # código do estudante).
 
 _RE_CODIGO_ENTRADA = re.compile(rf"^[{_ALFABETO_TURMA}]{{8}}$")
+# Separadores aceitos: espaço, "-", "_", "." e hífens de todo tipo (meia-risca, travessão,
+# sinal de menos, hífen de largura cheia), que teclados e o WhatsApp trocam no lugar de "-".
+_HIFENS = "".join(chr(c) for c in (*range(0x2010, 0x2016), 0x2212, 0xFE58, 0xFE63, 0xFF0D))
+_RE_SEPARADORES = re.compile(r"[\s\-_." + _HIFENS + "]")
 
 
 def gerar_codigo_entrada() -> str:
@@ -108,7 +112,9 @@ def gerar_codigo_entrada() -> str:
 
 def normalizar_codigo_entrada(texto: str) -> str | None:
     """Forma canônica XXXX-XXXX, ou None. Aceita minúsculas, espaços, pontos e sem hífen."""
-    limpo = re.sub(r"[\s\-_.]", "", texto).upper()
+    # Hífens de todo tipo: teclados com pontuação "inteligente" e textos colados do
+    # WhatsApp trocam "-" por meia-risca, travessão, sinal de menos etc.
+    limpo = _RE_SEPARADORES.sub("", texto).upper()
     if not _RE_CODIGO_ENTRADA.match(limpo):
         return None
     return f"{limpo[:4]}-{limpo[4:]}"
