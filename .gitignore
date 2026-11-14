@@ -29,3 +29,6 @@ Thumbs.db
 
 # Modelos baixados (fastembed)
 .cache/
+
+# Rascunhos dos agentes (planos em execução)
+.superpowers/

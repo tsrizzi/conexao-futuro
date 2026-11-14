@@ -3,7 +3,7 @@
 from collections import Counter
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Any
+from typing import Any, Literal
 
 from sqlalchemy import delete, func, select
 from sqlalchemy.exc import IntegrityError
@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from app.agent.profile import Perfil
 from app.db import codigo as codigos
 from app.db.models import (
+    CodigoEntrada,
     EventoAgregado,
     FormularioResposta,
     Participante,
@@ -228,6 +229,72 @@ def painel_da_turma(
     return painel
 
 
+# ---- Código de entrada no site ----------------------------------------------------------
+
+Situacao = Literal["agendado", "ativo", "encerrado", "revogado"]
+
+
+def criar_codigo_entrada(
+    db: Session, chave: bytes, rotulo: str | None, inicio: datetime, fim: datetime
+) -> tuple[CodigoEntrada, str]:
+    """Cria o código e o devolve em claro (só existe neste momento)."""
+    for _ in range(20):
+        codigo = codigos.gerar_codigo_entrada()
+        registro = CodigoEntrada(
+            codigo_hash=codigos.hash_do_codigo_entrada(codigo, chave),
+            final=codigo[-4:],
+            rotulo=rotulo or None,
+            inicio_em=inicio,
+            fim_em=fim,
+        )
+        db.add(registro)
+        try:
+            db.flush()
+        except IntegrityError:
+            db.rollback()
+            continue
+        return registro, codigo
+    raise RuntimeError("Não foi possível gerar um código de entrada único")
+
+
+def buscar_codigo_entrada(db: Session, texto: str, chave: bytes) -> CodigoEntrada | None:
+    codigo = codigos.normalizar_codigo_entrada(texto)
+    if codigo is None:
+        return None
+    return db.scalar(
+        select(CodigoEntrada).where(
+            CodigoEntrada.codigo_hash == codigos.hash_do_codigo_entrada(codigo, chave)
+        )
+    )
+
+
+def situacao_codigo(c: CodigoEntrada, momento: datetime | None = None) -> Situacao:
+    momento = momento or agora()
+    if c.revogado:
+        return "revogado"
+    if momento < _como_utc(c.inicio_em):
+        return "agendado"
+    if momento >= _como_utc(c.fim_em):
+        return "encerrado"
+    return "ativo"
+
+
+def listar_codigos_entrada(db: Session) -> list[CodigoEntrada]:
+    return list(
+        db.scalars(
+            select(CodigoEntrada).order_by(CodigoEntrada.criado_em.desc(), CodigoEntrada.id.desc())
+        )
+    )
+
+
+def revogar_codigo_entrada(db: Session, codigo_id: int) -> bool:
+    registro = db.get(CodigoEntrada, codigo_id)
+    if registro is None:
+        return False
+    registro.revogado = True
+    return True
+
+
 # ---- Retenção (seção 4.3) --------------------------------------------------------------
 
 
@@ -241,6 +308,7 @@ def limpar_expirados(db: Session, retencao_dias: int, momento: datetime | None =
             EventoAgregado.criado_em < momento - timedelta(days=retencao_dias)
         ),
         delete(Turma).where(Turma.expira_em < momento),
+        delete(CodigoEntrada).where(CodigoEntrada.fim_em < momento - timedelta(days=retencao_dias)),
     ):
         total += db.execute(alvo).rowcount or 0  # type: ignore[attr-defined]
     return total

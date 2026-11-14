@@ -91,3 +91,28 @@ def gerar_codigo_turma(escola: str | None, turma: str) -> str:
 
 def codigo_turma_valido(texto: str) -> bool:
     return bool(_RE_CODIGO_TURMA.match(texto.strip().upper()))
+
+
+# ---- Código de entrada no site (ex.: K7MQ-3XPT) ------------------------------------------
+# Gerado pelo admin; quem tem um código válido usa o site. Mesmo alfabeto sem ambiguidade
+# do código da turma. No banco vai o HMAC de "entrada:" + código (domínio separado do
+# código do estudante).
+
+_RE_CODIGO_ENTRADA = re.compile(rf"^[{_ALFABETO_TURMA}]{{8}}$")
+
+
+def gerar_codigo_entrada() -> str:
+    letras = "".join(secrets.choice(_ALFABETO_TURMA) for _ in range(8))
+    return f"{letras[:4]}-{letras[4:]}"
+
+
+def normalizar_codigo_entrada(texto: str) -> str | None:
+    """Forma canônica XXXX-XXXX, ou None. Aceita minúsculas, espaços, pontos e sem hífen."""
+    limpo = re.sub(r"[\s\-_.]", "", texto).upper()
+    if not _RE_CODIGO_ENTRADA.match(limpo):
+        return None
+    return f"{limpo[:4]}-{limpo[4:]}"
+
+
+def hash_do_codigo_entrada(codigo: str, chave: bytes) -> str:
+    return hash_do_codigo("entrada:" + codigo, chave)

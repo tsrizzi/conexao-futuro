@@ -112,3 +112,23 @@ class EventoAgregado(Base):
     tokens_entrada: Mapped[int | None] = mapped_column(Integer)
     tokens_saida: Mapped[int | None] = mapped_column(Integer)
     criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=agora, index=True)
+
+
+class CodigoEntrada(Base):
+    """Código para usar o site, gerado pelo admin (vale de inicio_em a fim_em).
+
+    Sem ligação com quem usa: guarda só o HMAC do código, os 4 últimos caracteres (para o
+    admin reconhecer na lista) e quantas vezes foi usado para entrar.
+    """
+
+    __tablename__ = "codigo_entrada"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    codigo_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    final: Mapped[str] = mapped_column(String(4))
+    rotulo: Mapped[str | None] = mapped_column(String(80))
+    inicio_em: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    fim_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    revogado: Mapped[bool] = mapped_column(Boolean, default=False)
+    usos: Mapped[int] = mapped_column(Integer, default=0)
+    criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=agora)
