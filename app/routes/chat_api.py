@@ -32,6 +32,7 @@ from app.agent.prompts import carregar
 from app.db import repositorio
 from app.llm.base import MENSAGEM_SOBRECARGA
 from app.routes.acesso_api import ip, participante_do_codigo
+from app.web.entrada import exigir_entrada
 from app.web.token import TAMANHO_MAXIMO, TokenInvalido, assinar, ler
 
 router = APIRouter(prefix="/api")
@@ -185,6 +186,7 @@ def _sessao_do_codigo(
 
 @router.post("/chat/iniciar")
 async def iniciar(request: Request, pedido: PedidoInicio | None = None) -> StreamingResponse:
+    await asyncio.to_thread(exigir_entrada, request)
     if not request.app.state.limite_inicio.permitir(ip(request)):
         raise HTTPException(status_code=429, detail=carregar("msg_limite"))
     orquestrador: Orquestrador = request.app.state.orquestrador
@@ -202,6 +204,7 @@ async def iniciar(request: Request, pedido: PedidoInicio | None = None) -> Strea
 
 @router.post("/chat/mensagem")
 async def mensagem(request: Request, pedido: PedidoMensagem) -> StreamingResponse:
+    await asyncio.to_thread(exigir_entrada, request)
     sessao = _sessao(request, pedido.token)
     if not request.app.state.limite_mensagens.permitir(sessao.id):
         return _stream(request, sessao, _apenas_aviso(carregar("msg_limite")))
@@ -229,11 +232,13 @@ def _exibicao(request: Request, pedido: PedidoResultado) -> dict[str, Any]:
 
 @router.post("/resultado")
 def resultado(request: Request, pedido: PedidoResultado) -> JSONResponse:
+    exigir_entrada(request)
     return JSONResponse(_exibicao(request, pedido))
 
 
 @router.post("/resultado.txt")
 def resultado_txt(request: Request, pedido: PedidoResultado) -> PlainTextResponse:
+    exigir_entrada(request)
     return PlainTextResponse(
         texto_de_exibicao(_exibicao(request, pedido)),
         headers={"Content-Disposition": 'attachment; filename="minhas-trilhas.txt"'},

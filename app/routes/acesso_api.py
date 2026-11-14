@@ -19,6 +19,7 @@ from app.db import repositorio
 from app.db.models import Participante
 from app.safety.crisis import detectar_crise
 from app.safety.pii import mascarar
+from app.web.entrada import exigir_entrada
 from app.web.rede import ip_do_cliente
 
 router = APIRouter(prefix="/api")
@@ -88,6 +89,7 @@ def perguntas() -> dict[str, Any]:
 
 @router.post("/formulario")
 def salvar_formulario(request: Request, pedido: PedidoFormulario) -> dict[str, Any]:
+    exigir_entrada(request)
     respostas, crise = _limpar_abertas(validar_respostas(pedido.respostas))
     estado = request.app.state
     with estado.sessoes.begin() as db:
@@ -121,6 +123,7 @@ def salvar_formulario(request: Request, pedido: PedidoFormulario) -> dict[str, A
 
 @router.post("/codigo")
 def entrar_com_codigo(request: Request, pedido: PedidoCodigo) -> dict[str, Any]:
+    exigir_entrada(request)
     with request.app.state.sessoes.begin() as db:
         participante = participante_do_codigo(request, db, pedido.codigo)
         respostas = repositorio.respostas_de(participante)

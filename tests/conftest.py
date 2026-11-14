@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 
 # Os testes nunca chamam API real: o provedor padrão é o fake, antes de importar o app.
 os.environ["APP_ENV"] = "development"
@@ -10,11 +11,16 @@ from fastapi.testclient import TestClient  # noqa: E402
 from app.agent.ofertas import Ofertas  # noqa: E402
 from app.agent.orchestrator import Orquestrador  # noqa: E402
 from app.config import Settings  # noqa: E402
-from app.db.models import Base  # noqa: E402
+from app.db import repositorio  # noqa: E402
+from app.db.models import (
+    Base,  # noqa: E402
+    agora,  # noqa: E402
+)
 from app.db.session import criar_engine, fabrica_de_sessoes  # noqa: E402
 from app.llm.fake import FakeProvider  # noqa: E402
 from app.main import create_app  # noqa: E402
 from app.rag.catalog import Catalogo  # noqa: E402
+from app.web.entrada import COOKIE_ENTRADA, criar_cookie_entrada  # noqa: E402
 from tests.agente_fake import BuscadorFixo  # noqa: E402
 
 
@@ -45,15 +51,29 @@ def banco_em_memoria():  # type: ignore[no-untyped-def]
 
 
 def criar_cliente(
-    llm: FakeProvider, catalogo: Catalogo, sessoes=None, **settings: object
+    llm: FakeProvider, catalogo: Catalogo, sessoes=None, liberado: bool = True, **settings: object
 ) -> TestClient:
-    """App completo com LLM falso, busca fixa e banco em memória (sem modelo de embeddings)."""
+    """App completo com LLM falso, busca fixa e banco em memória (sem modelo de embeddings).
+
+    Com `liberado` (padrão), o navegador de teste já passou pela porta de entrada.
+    """
+    sessoes = sessoes or banco_em_memoria()
     orquestrador = Orquestrador(llm, catalogo, BuscadorFixo(catalogo), Ofertas([]))
     config = make_settings(llm_provider="fake", secret_key="x" * 32, **settings)
-    app = create_app(
-        config, llm=llm, orquestrador=orquestrador, sessoes=sessoes or banco_em_memoria()
-    )
-    return TestClient(app)
+    app = create_app(config, llm=llm, orquestrador=orquestrador, sessoes=sessoes)
+    client = TestClient(app)
+    if liberado:
+        client.cookies.set(COOKIE_ENTRADA, liberacao_de_teste(sessoes, app.state.chave))
+    return client
+
+
+def liberacao_de_teste(sessoes, chave: bytes) -> str:  # type: ignore[no-untyped-def]
+    """Cria um código ativo no banco e devolve o valor do cookie de liberação."""
+    with sessoes.begin() as db:
+        registro, _ = repositorio.criar_codigo_entrada(
+            db, chave, "testes", agora() - timedelta(hours=1), agora() + timedelta(days=1)
+        )
+        return criar_cookie_entrada(chave, registro.id, registro.fim_em)[0]
 
 
 @pytest.fixture

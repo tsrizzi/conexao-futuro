@@ -118,3 +118,144 @@ def test_retencao_apaga_codigo_antigo(sessoes) -> None:  # type: ignore[no-untyp
     with sessoes() as db:
         assert db.get(CodigoEntrada, antigo) is None
         assert db.get(CodigoEntrada, recente) is not None
+
+
+# ---- A porta no servidor ---------------------------------------------------------------
+
+ROTAS_FECHADAS = [
+    ("/api/chat/iniciar", {}),
+    ("/api/chat/mensagem", {"token": "x", "texto": "oi"}),
+    ("/api/resultado", {"codigo": "ONDA-0000"}),
+    ("/api/resultado.txt", {"codigo": "ONDA-0000"}),
+    ("/api/formulario", {"respostas": {"f01": "4"}}),
+    ("/api/codigo", {"codigo": "ONDA-0000"}),
+]
+
+
+def cliente(catalogo, sessoes, llm=None, liberado=False):  # type: ignore[no-untyped-def]
+    from app.llm.fake import FakeProvider
+    from tests.conftest import criar_cliente
+
+    return criar_cliente(llm or FakeProvider(), catalogo, sessoes, liberado=liberado)
+
+
+@pytest.mark.parametrize(("rota", "corpo"), ROTAS_FECHADAS)
+def test_apis_fechadas_sem_codigo(catalogo_real, sessoes, rota, corpo) -> None:  # type: ignore[no-untyped-def]
+    from app.llm.fake import FakeProvider
+
+    llm = FakeProvider()
+    with cliente(catalogo_real, sessoes, llm) as client:
+        resposta = client.post(rota, json=corpo)
+    assert resposta.status_code == 403
+    assert resposta.headers["x-entrada"] == "necessaria"
+    assert llm.chamadas == []
+
+
+def test_entrar_com_codigo_libera(catalogo_real, sessoes) -> None:  # type: ignore[no-untyped-def]
+    codigo_id, codigo = criar(sessoes)
+    with cliente(catalogo_real, sessoes) as client:
+        resposta = client.post("/api/entrada", json={"codigo": codigo.lower().replace("-", " ")})
+        assert resposta.status_code == 200 and resposta.json()["ok"] is True
+        cookie = next(c for c in resposta.headers.get_list("set-cookie") if "cf_entrada=" in c)
+        assert "HttpOnly" in cookie and "SameSite=lax" in cookie
+        assert client.post("/api/chat/iniciar", json={}).status_code == 200
+    with sessoes() as db:
+        assert db.get(CodigoEntrada, codigo_id).usos == 1
+
+
+@pytest.mark.parametrize(
+    ("inicio_h", "fim_h", "revogado", "status", "mensagem"),
+    [
+        (1, 24, False, 403, "MENSAGEM_AGENDADO"),
+        (-48, -1, False, 403, "MENSAGEM_ENCERRADO"),
+        (-1, 24, True, 403, "MENSAGEM_REVOGADO"),
+    ],
+)
+def test_mensagens_por_situacao(
+    catalogo_real, sessoes, inicio_h, fim_h, revogado, status, mensagem
+) -> None:  # type: ignore[no-untyped-def]
+    from app.web import entrada
+
+    _, codigo = criar(sessoes, inicio_h, fim_h, revogado)
+    with cliente(catalogo_real, sessoes) as client:
+        resposta = client.post("/api/entrada", json={"codigo": codigo})
+        assert resposta.status_code == status
+        assert resposta.json()["detail"] == getattr(entrada, mensagem)
+        assert "cf_entrada" not in client.cookies
+        assert client.post("/api/chat/iniciar", json={}).status_code == 403
+
+
+def test_codigo_inexistente(catalogo_real, sessoes) -> None:  # type: ignore[no-untyped-def]
+    from app.web.entrada import MENSAGEM_INVALIDO
+
+    with cliente(catalogo_real, sessoes) as client:
+        for texto in ("ZZZZ-ZZZZ", "qualquer coisa"):
+            resposta = client.post("/api/entrada", json={"codigo": texto})
+            assert resposta.status_code == 404
+            assert resposta.json()["detail"] == MENSAGEM_INVALIDO
+
+
+def test_revogar_corta_conversa_em_andamento(catalogo_real, sessoes) -> None:  # type: ignore[no-untyped-def]
+    from tests.test_web import eventos_sse, token_de
+
+    codigo_id, codigo = criar(sessoes)
+    with cliente(catalogo_real, sessoes) as client:
+        client.post("/api/entrada", json={"codigo": codigo})
+        token = token_de(eventos_sse(client.post("/api/chat/iniciar", json={}).text))
+        with sessoes.begin() as db:
+            repositorio.revogar_codigo_entrada(db, codigo_id)
+        resposta = client.post("/api/chat/mensagem", json={"token": token, "texto": "oi"})
+        assert resposta.status_code == 403
+        assert resposta.headers["x-entrada"] == "necessaria"
+
+
+def test_cookie_adulterado_ou_de_outra_chave(catalogo_real, sessoes) -> None:  # type: ignore[no-untyped-def]
+    from app.web.entrada import COOKIE_ENTRADA, criar_cookie_entrada, ler_cookie_entrada
+
+    fim = agora() + timedelta(hours=5)
+    valor, _ = criar_cookie_entrada(CHAVE, 7, fim, agora=1_000_000.0)
+    assert ler_cookie_entrada(valor, CHAVE, agora=1_000_000.0) == 7
+    codigo_id, exp, assinatura = valor.split(".")
+    assert ler_cookie_entrada(f"8.{exp}.{assinatura}", CHAVE, agora=1_000_000.0) is None
+    assert ler_cookie_entrada(f"{codigo_id}.{int(exp) + 9}.{assinatura}", CHAVE) is None
+    assert ler_cookie_entrada(valor, b"y" * 32, agora=1_000_000.0) is None
+    assert ler_cookie_entrada(valor, CHAVE, agora=float(exp) + 1) is None
+    assert ler_cookie_entrada(None, CHAVE) is None
+    assert ler_cookie_entrada("lixo", CHAVE) is None
+
+    # Cookie bem assinado, mas o código foi apagado do banco: não vale.
+    apagado, _ = criar(sessoes)
+    with sessoes.begin() as db:
+        db.delete(db.get(CodigoEntrada, apagado))
+    with cliente(catalogo_real, sessoes) as client:
+        client.cookies.set(
+            COOKIE_ENTRADA, criar_cookie_entrada(client.app.state.chave, apagado, fim)[0]
+        )
+        assert client.post("/api/chat/iniciar", json={}).status_code == 403
+
+
+def test_forca_bruta_so_conta_erros(catalogo_real, sessoes) -> None:  # type: ignore[no-untyped-def]
+    _, codigo = criar(sessoes)
+    with cliente(catalogo_real, sessoes) as client:
+        for _ in range(30):
+            assert client.post("/api/entrada", json={"codigo": codigo}).status_code == 200
+        for _ in range(10):
+            assert client.post("/api/entrada", json={"codigo": "ZZZZ-ZZZZ"}).status_code == 404
+        assert client.post("/api/entrada", json={"codigo": codigo}).status_code == 429
+
+
+def test_liberacao_dura_no_maximo_12h() -> None:
+    from app.web.entrada import criar_cookie_entrada
+
+    _, longo = criar_cookie_entrada(CHAVE, 1, agora() + timedelta(days=30))
+    assert 12 * 3600 - 5 <= longo <= 12 * 3600
+    _, curto = criar_cookie_entrada(CHAVE, 1, agora() + timedelta(hours=1))
+    assert 3600 - 5 <= curto <= 3600
+
+
+def test_sair_apaga_a_liberacao(catalogo_real, sessoes) -> None:  # type: ignore[no-untyped-def]
+    _, codigo = criar(sessoes)
+    with cliente(catalogo_real, sessoes) as client:
+        client.post("/api/entrada", json={"codigo": codigo})
+        assert client.post("/api/saida").status_code == 200
+        assert client.post("/api/chat/iniciar", json={}).status_code == 403
