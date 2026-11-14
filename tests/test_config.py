@@ -27,6 +27,9 @@ def test_gemini_bloqueado_em_producao() -> None:
         make_settings(app_env="production", llm_provider="gemini")
 
 
+POSTGRES = "postgresql://usuario:senha@exemplo.neon.tech/banco?sslmode=require"
+
+
 def test_gemini_permitido_em_desenvolvimento() -> None:
     s = make_settings(app_env="development", llm_provider="gemini")
     assert s.llm_provider == LLMProviderName.GEMINI
@@ -35,7 +38,11 @@ def test_gemini_permitido_em_desenvolvimento() -> None:
 def test_log_conversas_proibido_em_producao() -> None:
     with pytest.raises(ValidationError, match="LOG_CONVERSAS"):
         make_settings(
-            app_env="production", llm_provider="anthropic", log_conversas=True, secret_key="x" * 32
+            app_env="production",
+            llm_provider="anthropic",
+            log_conversas=True,
+            secret_key="x" * 32,
+            database_url=POSTGRES,
         )
 
 
@@ -44,7 +51,15 @@ def test_secret_key_obrigatoria_em_producao() -> None:
         make_settings(app_env="production", llm_provider="anthropic")
     with pytest.raises(ValidationError, match="SECRET_KEY"):
         make_settings(app_env="production", llm_provider="anthropic", secret_key="curta")
-    assert make_settings(app_env="production", llm_provider="anthropic", secret_key="x" * 32)
+    assert make_settings(
+        app_env="production", llm_provider="anthropic", secret_key="x" * 32, database_url=POSTGRES
+    )
+
+
+def test_postgres_obrigatorio_em_producao() -> None:
+    """Variável com nome errado (ex.: database-url) cairia no SQLite, que some a cada reinício."""
+    with pytest.raises(ValidationError, match="DATABASE_URL"):
+        make_settings(app_env="production", llm_provider="anthropic", secret_key="x" * 32)
 
 
 def test_segredos_nao_aparecem_no_repr() -> None:

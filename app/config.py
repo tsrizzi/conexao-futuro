@@ -90,6 +90,11 @@ class Settings(BaseSettings):
                 "SECRET_KEY com pelo menos 32 caracteres é obrigatória em production "
                 '(gere com: python -c "import secrets; print(secrets.token_urlsafe(48))").'
             )
+        if self.app_env == AppEnv.PRODUCTION and self.database_url.startswith("sqlite"):
+            raise ValueError(
+                "DATABASE_URL (Postgres) é obrigatória em production: o SQLite some a cada "
+                "reinício do container. Confira se a variável se chama exatamente DATABASE_URL."
+            )
         if self.app_env == AppEnv.PRODUCTION and self.log_conversas:
             raise ValueError(
                 "LOG_CONVERSAS=true só é permitido em testes com adultos, nunca em production."
