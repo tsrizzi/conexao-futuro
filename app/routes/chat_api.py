@@ -31,7 +31,7 @@ from app.agent.orchestrator import (
 from app.agent.prompts import carregar
 from app.db import repositorio
 from app.llm.base import MENSAGEM_SOBRECARGA
-from app.routes.acesso_api import MENSAGEM_CODIGO_INVALIDO, contar_tentativa
+from app.routes.acesso_api import ip, participante_do_codigo
 from app.web.token import TAMANHO_MAXIMO, TokenInvalido, assinar, ler
 
 router = APIRouter(prefix="/api")
@@ -148,10 +148,6 @@ def _stream(request: Request, sessao: Sessao, fluxo: AsyncIterator[Evento]) -> S
     )
 
 
-def _ip(request: Request) -> str:
-    return request.client.host if request.client else "desconhecido"
-
-
 def _sessao(request: Request, token: str) -> Sessao:
     try:
         return ler(token, request.app.state.chave)
@@ -175,11 +171,8 @@ def _sessao_do_codigo(
     request: Request, codigo: str, codigo_turma: str | None
 ) -> tuple[Sessao, Any, str]:
     """Começa a conversa a partir do que o participante já respondeu (CARREGA_FORMULARIO)."""
-    contar_tentativa(request)
     with request.app.state.sessoes.begin() as db:
-        participante = repositorio.buscar_por_codigo(db, codigo, request.app.state.chave)
-        if participante is None:
-            raise HTTPException(status_code=404, detail=MENSAGEM_CODIGO_INVALIDO)
+        participante = participante_do_codigo(request, db, codigo)
         respostas = repositorio.respostas_de(participante)
         perfil = repositorio.perfil_de(participante) or perfil_do_formulario(respostas)
         turma = repositorio.buscar_turma(db, codigo_turma)
@@ -192,7 +185,7 @@ def _sessao_do_codigo(
 
 @router.post("/chat/iniciar")
 async def iniciar(request: Request, pedido: PedidoInicio | None = None) -> StreamingResponse:
-    if not request.app.state.limite_inicio.permitir(_ip(request)):
+    if not request.app.state.limite_inicio.permitir(ip(request)):
         raise HTTPException(status_code=429, detail=carregar("msg_limite"))
     orquestrador: Orquestrador = request.app.state.orquestrador
     codigo_turma = pedido.codigo_turma if pedido else None
@@ -226,11 +219,8 @@ def _exibicao(request: Request, pedido: PedidoResultado) -> dict[str, Any]:
             raise HTTPException(status_code=404, detail="Ainda não há trilhas nesta conversa.")
     if not pedido.codigo:
         raise HTTPException(status_code=400, detail=MENSAGEM_EXPIROU)
-    contar_tentativa(request)
     with request.app.state.sessoes.begin() as db:
-        participante = repositorio.buscar_por_codigo(db, pedido.codigo, request.app.state.chave)
-        if participante is None:
-            raise HTTPException(status_code=404, detail=MENSAGEM_CODIGO_INVALIDO)
+        participante = participante_do_codigo(request, db, pedido.codigo)
         exibicao = repositorio.ultima_recomendacao(participante)
     if exibicao is None:
         raise HTTPException(status_code=404, detail="Ainda não há trilhas para esse código.")

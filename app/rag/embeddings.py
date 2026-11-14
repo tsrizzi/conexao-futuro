@@ -62,7 +62,8 @@ class OnnxEmbedder:
 
     Produz os mesmos vetores do fastembed (há teste de equivalência), mas usa cerca de
     metade da RAM: o fastembed carrega o tokenizer.json de 250 mil termos (~250 MB) e
-    otimiza o grafo duplicando pesos. Isso é o que cabe no plano gratuito do Render.
+    otimiza o grafo duplicando pesos. Mesmo assim o pico na partida é ~535 MB: por isso
+    o deploy usa 1 GB (Cloud Run).
     """
 
     def __init__(self, modelo: str, cache_dir: str | None = None, threads: int = 1) -> None:

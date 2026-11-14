@@ -1,0 +1,17 @@
+# Nada de segredos, ambiente local ou dados brutos na imagem.
+.env
+.env.*
+!.env.example
+.git
+.venv
+.cache
+**/__pycache__
+.pytest_cache
+.ruff_cache
+.mypy_cache
+*.db
+*.sqlite3
+data/raw
+tests
+.vscode
+.idea

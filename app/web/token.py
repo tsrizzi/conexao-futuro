@@ -4,7 +4,7 @@ A especificação manda o histórico ficar "na sessão do navegador" e o servido
 texto das conversas. Então o servidor não guarda nada: a cada resposta devolve a sessão
 inteira (já com dados pessoais mascarados), comprimida e assinada com HMAC. O navegador a
 reenvia na próxima mensagem. Fechou a aba, acabou. Isso também sobrevive a reinícios do
-servidor (o Render gratuito dorme e reinicia).
+servidor (no Cloud Run a instância desliga sem uso e reinicia).
 
 A assinatura impede que alguém altere o estado (ex.: forjar mensagens do agente ou trocar
 as trilhas). O conteúdo não é cifrado, mas só a própria pessoa tem o token.

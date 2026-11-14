@@ -42,7 +42,9 @@ class Settings(BaseSettings):
     llm_max_tokens: int = 1024
     llm_max_concurrency: int = 8
     llm_max_retries: int = 3
-    llm_timeout_s: float = 30.0  # por tentativa; se travar, vai ao modelo reserva
+    llm_timeout_s: float = 30.0
+    # Só para o teste de carga com LLM_PROVIDER=fake: imita a demora de um LLM real.
+    llm_fake_atraso_s: float = 0.0
 
     anthropic_api_key: SecretStr | None = None
     openai_compat_base_url: str | None = None
@@ -66,6 +68,10 @@ class Settings(BaseSettings):
     retencao_dias: int = 60
     cobertura_minima: float = 0.7
     log_conversas: bool = False
+
+    # Quantos proxies confiáveis ficam na frente do app (Cloud Run: 1). 0 = ignora o
+    # X-Forwarded-For e usa o IP da conexão (desenvolvimento local).
+    proxy_saltos: int = 0
 
     # Painel do professor (seção 8.8): abaixo disto, a turma mostra só a contagem.
     painel_minimo_detalhe: int = 5

@@ -86,6 +86,16 @@ para a roda de conversa (`data/roda_conversa.yaml`, editável) e o custo estimad
 com menos de `PAINEL_MINIMO_DETALHE` (5) participantes mostram só a contagem. Os eventos não
 têm nenhuma ligação com o estudante.
 
+## Deploy
+
+Google Cloud Run (imagem do `Dockerfile`, deploy a cada push no `main`) com Postgres no Neon.
+Passo a passo, segredos e teste de carga em [docs/DEPLOY.md](docs/DEPLOY.md).
+
+```bash
+docker build -t conexao-futuro .                 # a mesma imagem que vai para o Cloud Run
+uv run locust -f scripts/carga/locustfile.py ... # teste de carga (veja docs/DEPLOY.md)
+```
+
 ## Testes e lint
 
 ```bash

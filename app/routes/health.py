@@ -5,7 +5,7 @@ router = APIRouter()
 
 @router.get("/health")
 async def health(request: Request) -> dict[str, str]:
-    """Checagem de vida para o Render. Não expõe segredos nem chama o LLM (custo zero)."""
+    """Checagem de vida (Cloud Run). Não expõe segredos nem chama o LLM (custo zero)."""
     settings = request.app.state.settings
     return {
         "status": "ok",

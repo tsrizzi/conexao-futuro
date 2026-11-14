@@ -61,7 +61,7 @@ def _criar(settings: Settings, modelo: str) -> LLMProvider:
         case LLMProviderName.FAKE:
             from app.llm.fake import FakeProvider
 
-            return FakeProvider(**comuns)
+            return FakeProvider(atraso_s=settings.llm_fake_atraso_s, **comuns)
         case LLMProviderName.OPENAI_COMPAT:
             raise NotImplementedError(
                 "O adaptador 'openai_compat' ainda não foi implementado (fora da Fase 0)."

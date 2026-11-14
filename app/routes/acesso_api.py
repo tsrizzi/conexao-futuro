@@ -7,6 +7,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
 
 from app.agent.formulario import (
     carregar_formulario,
@@ -15,8 +16,10 @@ from app.agent.formulario import (
 )
 from app.agent.prompts import carregar
 from app.db import repositorio
+from app.db.models import Participante
 from app.safety.crisis import detectar_crise
 from app.safety.pii import mascarar
+from app.web.rede import ip_do_cliente
 
 router = APIRouter(prefix="/api")
 
@@ -41,13 +44,25 @@ class PedidoCodigo(BaseModel):
 
 
 def ip(request: Request) -> str:
-    return request.client.host if request.client else "desconhecido"
+    return ip_do_cliente(request)
 
 
-def contar_tentativa(request: Request) -> None:
-    """Força bruta (seção 4.4): no máximo 10 tentativas de código por IP a cada 10 min."""
-    if not request.app.state.limite_codigo.permitir(ip(request)):
+def participante_do_codigo(request: Request, db: Session, codigo: str) -> Participante:
+    """Busca pelo código, com proteção contra força bruta (seção 4.4).
+
+    Só as tentativas ERRADAS contam: no máximo 10 por IP a cada 10 min. A turma inteira
+    costuma sair pelo mesmo IP da escola, e quem digita o código certo não pode gastar o
+    limite dos colegas. Para quem tenta adivinhar, quase toda tentativa é errada.
+    """
+    limite = request.app.state.limite_codigo
+    chave = ip(request)
+    if limite.bloqueado(chave):
         raise HTTPException(status_code=429, detail=MENSAGEM_TENTATIVAS)
+    participante = repositorio.buscar_por_codigo(db, codigo, request.app.state.chave)
+    if participante is None:
+        limite.registrar(chave)
+        raise HTTPException(status_code=404, detail=MENSAGEM_CODIGO_INVALIDO)
+    return participante
 
 
 def _limpar_abertas(respostas: dict[str, str]) -> tuple[dict[str, str], bool]:
@@ -78,10 +93,7 @@ def salvar_formulario(request: Request, pedido: PedidoFormulario) -> dict[str, A
     with estado.sessoes.begin() as db:
         codigo_novo = None
         if pedido.codigo:
-            contar_tentativa(request)
-            participante = repositorio.buscar_por_codigo(db, pedido.codigo, estado.chave)
-            if participante is None:
-                raise HTTPException(status_code=404, detail=MENSAGEM_CODIGO_INVALIDO)
+            participante = participante_do_codigo(request, db, pedido.codigo)
         else:
             if not estado.limite_criacao.permitir(ip(request)):
                 raise HTTPException(status_code=429, detail=MENSAGEM_TENTATIVAS)
@@ -109,11 +121,8 @@ def salvar_formulario(request: Request, pedido: PedidoFormulario) -> dict[str, A
 
 @router.post("/codigo")
 def entrar_com_codigo(request: Request, pedido: PedidoCodigo) -> dict[str, Any]:
-    contar_tentativa(request)
     with request.app.state.sessoes.begin() as db:
-        participante = repositorio.buscar_por_codigo(db, pedido.codigo, request.app.state.chave)
-        if participante is None:
-            raise HTTPException(status_code=404, detail=MENSAGEM_CODIGO_INVALIDO)
+        participante = participante_do_codigo(request, db, pedido.codigo)
         respostas = repositorio.respostas_de(participante)
         return {
             "respostas": respostas,

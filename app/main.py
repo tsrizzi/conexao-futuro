@@ -60,7 +60,8 @@ def _limpar(sessoes: sessionmaker[Session], retencao_dias: int) -> int:
 async def _limpeza_diaria(sessoes: sessionmaker[Session], retencao_dias: int) -> None:
     """Apaga o que passou do prazo (seção 4.3). Roda ao iniciar e depois a cada 24 h.
 
-    O Render gratuito não tem cron; como o app dorme e acorda, rodar ao iniciar já cobre.
+    No Cloud Run a CPU só roda durante as requisições e a instância desliga sem uso; como o
+    app dorme e acorda, rodar ao iniciar já cobre.
     """
     while True:
         try:
@@ -105,10 +106,11 @@ def create_app(
     app.state.llm = provedor
     app.state.orquestrador = orquestrador
     app.state.chave = _chave(settings)
+    # Limites por IP pensados para uma turma inteira (35+) atrás do mesmo IP da escola.
     app.state.limite_mensagens = LimitadorTaxa(maximo=30, janela_s=600)  # por sessão
-    app.state.limite_inicio = LimitadorTaxa(maximo=30, janela_s=600)  # por IP
-    app.state.limite_codigo = LimitadorTaxa(maximo=10, janela_s=600)  # força bruta, por IP
-    app.state.limite_criacao = LimitadorTaxa(maximo=20, janela_s=600)  # novos códigos, por IP
+    app.state.limite_inicio = LimitadorTaxa(maximo=150, janela_s=600)  # conversas, por IP
+    app.state.limite_codigo = LimitadorTaxa(maximo=10, janela_s=600)  # códigos ERRADOS, por IP
+    app.state.limite_criacao = LimitadorTaxa(maximo=100, janela_s=600)  # novos códigos, por IP
     app.state.limite_login = LimitadorTaxa(maximo=5, janela_s=600)  # painel, por IP
     app.state.limite_turma = LimitadorTaxa(maximo=200, janela_s=600)  # consulta de turma, por IP
     app.state.sessoes = sessoes

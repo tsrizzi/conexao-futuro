@@ -10,7 +10,7 @@ RAIZ = Path(__file__).resolve().parents[2]
 
 
 def url_normalizada(url: str) -> str:
-    """Neon/Supabase/Render entregam 'postgres://'; o SQLAlchemy quer o driver explícito."""
+    """Neon e outros provedores entregam 'postgres://'; o SQLAlchemy quer o driver explícito."""
     for prefixo in ("postgres://", "postgresql://"):
         if url.startswith(prefixo):
             return "postgresql+psycopg://" + url[len(prefixo) :]

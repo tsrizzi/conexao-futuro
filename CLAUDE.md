@@ -11,7 +11,7 @@ Agente conversacional web que ajuda estudantes do 2º ano do Ensino Médio (15 a
 - Tudo voltado ao usuário (textos de interface, mensagens, prompts do agente) em **português do Brasil**. Código, nomes de variáveis e commits podem ser em português ou inglês, desde que sejam consistentes.
 
 ## Stack (não trocar sem perguntar)
-Python 3.12 · FastAPI · Jinja2 · Bootstrap 5.3 (CDN) + JS puro · SQLAlchemy 2 + Alembic · Pydantic v2 · fastembed + rank-bm25 + numpy · pytest · ruff · Deploy: Render + Postgres (Neon/Supabase).
+Python 3.12 · FastAPI · Jinja2 · Bootstrap 5.3 (CDN) + JS puro · SQLAlchemy 2 + Alembic · Pydantic v2 · fastembed + rank-bm25 + numpy · pytest · ruff · Deploy: Google Cloud Run (Dockerfile) + Postgres (Neon).
 
 ## Comandos
 ```bash

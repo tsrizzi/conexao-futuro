@@ -21,14 +21,25 @@ class LimitadorTaxa:
         self._relogio = relogio
         self._eventos: dict[str, deque[float]] = {}
 
-    def permitir(self, chave: str) -> bool:
+    def _fila(self, chave: str) -> deque[float]:
         agora = self._relogio()
         fila = self._eventos.setdefault(chave, deque())
         while fila and agora - fila[0] >= self.janela_s:
             fila.popleft()
-        if len(fila) >= self.maximo:
+        return fila
+
+    def bloqueado(self, chave: str) -> bool:
+        """Já chegou ao máximo? (não conta como evento)"""
+        return len(self._fila(chave)) >= self.maximo
+
+    def registrar(self, chave: str) -> None:
+        self._fila(chave).append(self._relogio())
+
+    def permitir(self, chave: str) -> bool:
+        """Conta o evento, se ainda couber."""
+        if self.bloqueado(chave):
             return False
-        fila.append(agora)
+        self.registrar(chave)
         return True
 
     def limpar_inativos(self) -> None:

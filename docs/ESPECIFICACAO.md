@@ -85,8 +85,8 @@ O sistema implementa os três (seções 8 e 9). O modelo padrão é `claude-haik
   - **Embeddings locais** com `fastembed` (ONNX, leve) e o modelo `paraphrase-multilingual-MiniLM-L12-v2`, que entende português. São locais para que nenhum texto do estudante saia do servidor só para gerar embedding.
   - **BM25** (`rank-bm25`) combinado com os embeddings (busca híbrida).
   - **Índice:** o catálogo tem cerca de 200 cursos, então basta uma matriz numpy salva em arquivo, sem banco vetorial dedicado.
-- **Banco:** Postgres gratuito (Neon ou Supabase) em produção, SQLite local.
-- **Hospedagem:** Render (web service gratuito). Na hospedagem gratuita o app "dorme" após ~15 min parado e leva cerca de 1 min para acordar, por isso **abra o site 5 minutos antes da oficina**. O disco do Render gratuito é apagado a cada deploy, então nada persistente fica no disco, só no Postgres.
+- **Banco:** Postgres gratuito (Neon, região São Paulo) em produção, SQLite local.
+- **Hospedagem:** Google Cloud Run (camada gratuita), com deploy automático a cada push no GitHub. Decidido na Fase 6 (nov/2026): o Render gratuito tem 512 MB e o app não sobe neles (medido: pico de ~535 MB ao carregar o modelo de embeddings); o Cloud Run permite 1 GB. Sem uso, o Cloud Run desliga a instância e leva alguns segundos para acordar, por isso **abra o site 5 minutos antes da oficina**. O disco do container é descartável: nada persistente fica nele, só no Postgres.
 - **Testes:** pytest, httpx, e Locust para teste de carga.
 - **Qualidade de código:** ruff + mypy (modo básico).
 
@@ -97,7 +97,7 @@ conexao-futuro/
 ├── README.md
 ├── pyproject.toml
 ├── .env.example
-├── render.yaml
+├── Dockerfile               # imagem de produção (Cloud Run)
 ├── docs/
 │   ├── ESPECIFICACAO.md          ← este arquivo
 │   └── AVISO_PRIVACIDADE.md
@@ -339,7 +339,7 @@ Formato de `perguntas.yaml`:
 - **Streaming** (SSE) em todas as respostas do chat.
 - **Fila/semáforo** de chamadas ao LLM (concorrência configurável) e **retry com backoff exponencial** para erros 429/529. Se ainda falhar, mostra a mensagem amigável "muita gente conversando agora, tenta de novo em alguns segundos 😉".
 - **Prompt caching** (Anthropic) no prompt do sistema, para reduzir custo e latência.
-- O modelo de embeddings e o índice são carregados **uma vez** ao iniciar. Meta de RAM < 450 MB, para caber no plano gratuito do Render.
+- O modelo de embeddings e o índice são carregados **uma vez** ao iniciar. Uso medido: ~380 MB estável, pico de ~535 MB na partida; o Cloud Run roda com 1 GB.
 - **Teste de carga** com Locust: 40 usuários virtuais simulando uma conversa completa.
 - **Custo:** registra os tokens consumidos por sessão e mostra o total no painel. Configura também um limite de gasto mensal no console do provedor.
 
@@ -374,7 +374,7 @@ Cada fase termina com testes passando e um commit. **Não avançar sem cumprir o
 | **3 — Interface de chat** | Telas de início, chat (streaming e chips) e resultado, com exportação .txt/.pdf | Funciona num celular de 360 px. A exportação abre corretamente no NotebookLM. Lighthouse de acessibilidade ≥ 90. |
 | **4 — Formulário e código** | Formulário de apoio, geração e recuperação de código, Postgres/SQLite, Alembic, limpeza por retenção | O código recupera as respostas em outro dispositivo. O conteúdo do chat não é gravado. A força bruta é bloqueada. |
 | **5 — Painel do professor** | Login, turmas, gráficos agregados, link do Padlet por turma | Nenhuma tela mostra dados individuais. Turmas com menos de 5 participantes não exibem detalhamento. |
-| **6 — Deploy** | `render.yaml`, Postgres no Neon ou Supabase, README de deploy | Site no ar com HTTPS. Teste de carga com 40 usuários sem erro visível. |
+| **6 — Deploy** | `Dockerfile`, Cloud Run, Postgres no Neon, `docs/DEPLOY.md`, teste de carga (Locust) | Site no ar com HTTPS. Teste de carga com 40 usuários sem erro visível. |
 | **7 — Avaliação de qualidade** | `eval_recomendacoes.py` com 20 perfis fictícios e o resultado esperado | ≥ 80% dos perfis recebem ao menos 1 trilha do eixo esperado. Revisão manual do tom em 5 conversas. |
 | **8 — Piloto** | Teste com 3 a 5 adultos (colegas e orientador) antes da escola | Ajustes de linguagem incorporados. Checklist da oficina pronto. |
 
