@@ -137,6 +137,26 @@ Uma revisão de teste, com o LLM falso, que não recebe o tráfego dos estudante
 Resultado local (container com 1 GB e 1 vCPU, nov/2026): 0 falhas, primeira palavra em
 2,12 s com atraso imitado de 2,1 s, memória estável em ~380 MB.
 
+Resultado no Cloud Run (14/11/2026, `europe-west1`, LLM falso, 40 usuários por 5 min):
+1.329 requisições, **0 falhas**, primeira palavra em 2,3 s (2,1 s imitados + ~220 ms de rede
+até a Europa), páginas em ~220 ms. Em `southamerica-east1` a rede cairia para poucas dezenas
+de ms.
+
+## Erros que já aconteceram (e o que fazer)
+
+| Sintoma nos registros | Causa | Correção |
+|---|---|---|
+| `SECRET_KEY com pelo menos 32 caracteres é obrigatória` | Secret não ligado ao serviço | `--update-secrets=SECRET_KEY=secret-key:latest` |
+| `DATABASE_URL (Postgres) é obrigatória em production` (versões antigas: `unable to open database file`) | Variável com nome errado (ex.: `database-url`) | `--remove-secrets=database-url --update-secrets=DATABASE_URL=database-url:latest` |
+| `Permission denied on secret` | Conta de serviço sem acesso | `gcloud projects add-iam-policy-binding PROJETO --member=serviceAccount:NUMERO-compute@developer.gserviceaccount.com --role=roles/secretmanager.secretAccessor` |
+| `Secret ... was not found` | Secret sem nenhuma versão | Criar a versão (Secret Manager → secret → Nova versão) |
+| `container ran out of memory` | Memória padrão de 512 MiB | `--memory=1Gi --cpu=1 --cpu-boost` |
+| Registros com `MANUAL_OR_CUSTOMER_MIN_INSTANCE` | Mínimo de instâncias = 1 (cobra parado) | `--min-instances=0 --max-instances=2` |
+
+Os nomes das **variáveis** são sempre em maiúsculas com `_` (`DATABASE_URL`); os nomes dos
+**secrets** podem ser outros (`database-url`). No Cloud Shell, cole comandos longos numa linha
+só: a colagem de várias linhas costuma embaralhar o fim.
+
 ## 7. No dia da oficina
 
 - Abra o site uns 5 minutos antes: sem uso, a instância desliga e leva ~10 s para acordar.
