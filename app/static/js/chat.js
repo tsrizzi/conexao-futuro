@@ -160,6 +160,16 @@
           texto = "";
           break;
         }
+        case "estado":
+          // Montar as trilhas leva uns 10 s: explica a espera em vez do "Pensando…".
+          if (dados.estado === "recomenda" && !pensando.hidden) {
+            textoPensando.textContent = "Montando suas trilhas com base no que você contou… leva uns segundos.";
+            clearTimeout(avisoDemora);
+            avisoDemora = setTimeout(() => {
+              textoPensando.textContent = "Quase lá: estou conferindo os cursos no catálogo…";
+            }, 15000);
+          }
+          break;
         case "sessao":
           CF.sessao.salvarToken(dados.token);
           break;
