@@ -50,19 +50,26 @@ class SessaoProfessor:
         return bool(enviado) and hmac.compare_digest(self.csrf(chave), enviado or "")
 
 
-def criar_cookie(chave: bytes, hash_senha: str, agora: float | None = None) -> str:
+def criar_cookie(
+    chave: bytes, hash_senha: str, agora: float | None = None, escopo: str = "prof"
+) -> str:
+    """O escopo ("prof" ou "admin") entra na assinatura: um cookie nunca vale no outro."""
     expira = str(int((agora or time.time()) + VALIDADE_S))
     nonce = secrets.token_urlsafe(16)
-    return f"{expira}.{nonce}.{_assinar(chave, 'prof', expira, nonce, hash_senha)}"
+    return f"{expira}.{nonce}.{_assinar(chave, escopo, expira, nonce, hash_senha)}"
 
 
 def ler_cookie(
-    valor: str | None, chave: bytes, hash_senha: str | None, agora: float | None = None
+    valor: str | None,
+    chave: bytes,
+    hash_senha: str | None,
+    agora: float | None = None,
+    escopo: str = "prof",
 ) -> SessaoProfessor | None:
     if not valor or not hash_senha or valor.count(".") != 2:
         return None
     expira, nonce, assinatura = valor.split(".")
-    esperado = _assinar(chave, "prof", expira, nonce, hash_senha)
+    esperado = _assinar(chave, escopo, expira, nonce, hash_senha)
     if not hmac.compare_digest(assinatura, esperado):
         return None
     if not expira.isdigit() or int(expira) < (agora or time.time()):

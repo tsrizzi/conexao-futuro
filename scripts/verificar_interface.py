@@ -92,6 +92,8 @@ def app_demo() -> Any:
         llm_provider="fake",  # type: ignore[arg-type]
         secret_key="d" * 32,  # type: ignore[arg-type]
         professor_password_hash=gerar_hash(SENHA_DEMO),  # type: ignore[arg-type]
+        admin_usuario="admin",
+        admin_password_hash=gerar_hash(SENHA_DEMO),  # type: ignore[arg-type]
     )
     # Arquivo temporário (o SQLite em memória não aguenta requisições simultâneas).
     banco = Path(tempfile.mkdtemp(prefix="cf-banco-")) / "demo.db"
@@ -154,6 +156,28 @@ async def percorrer_professor(cdp: "CDP", base: str, tema: str, achados: dict[st
         )
         await cdp.captura(f"{tema}-10-professor-{nome}")
         await checar(cdp, f"{tema}/professor-{nome}", achados)
+
+
+async def percorrer_admin(cdp: "CDP", base: str, tema: str, achados: dict[str, Any]) -> None:
+    await cdp("Network.clearBrowserCookies")
+    await cdp.abrir(f"{base}/admin")
+    await cdp.captura(f"{tema}-11-admin-login", inteira=False)
+    await checar(cdp, f"{tema}/admin-login", achados)
+    await cdp.js(
+        f"{{ document.querySelector('#usuario').value = 'admin'; "
+        f"document.querySelector('#senha').value = {json.dumps(SENHA_DEMO)}; "
+        "document.querySelector('form').submit(); }"
+    )
+    await cdp.esperar("document.readyState === 'complete' && document.querySelector('#rotulo')")
+    await cdp.js(
+        "{ document.querySelector('#rotulo').value = 'Turma 2B — oficina'; "
+        "document.querySelector('form[action=\"/admin/codigos\"]').submit(); }"
+    )
+    await cdp.esperar(
+        "document.readyState === 'complete' && document.querySelector('[data-codigo-novo]')"
+    )
+    await cdp.captura(f"{tema}-12-admin-codigos")
+    await checar(cdp, f"{tema}/admin-codigos", achados)
 
 
 def porta_livre() -> int:
@@ -357,6 +381,7 @@ async def principal() -> int:
             for tema in ("light", "dark"):
                 await percorrer(cdp, f"http://127.0.0.1:{porta_app}", tema, achados)
                 await percorrer_professor(cdp, f"http://127.0.0.1:{porta_app}", tema, achados)
+                await percorrer_admin(cdp, f"http://127.0.0.1:{porta_app}", tema, achados)
     finally:
         processo.terminate()
         servidor.should_exit = True

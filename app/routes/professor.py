@@ -11,30 +11,33 @@ from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qs, urlsplit
+from urllib.parse import urlsplit
 
 import yaml
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse, Response
+from fastapi.responses import HTMLResponse, Response
 
-from app.config import AppEnv
 from app.db import repositorio
 from app.db.codigo import nome_da_turma
 from app.routes.acesso_api import ip
-from app.routes.paginas import templates
 from app.web import professor_sessao as auth
+from app.web.formularios import (
+    MENSAGEM_EXPIROU,
+    MENSAGEM_TENTATIVAS,
+    cookie_seguro,
+    ir,
+    ler_formulario,
+    pagina_privada,
+)
 
 RAIZ = Path(__file__).resolve().parents[2]
 router = APIRouter()
 
-TAMANHO_MAXIMO_FORM = 4_000
 MENSAGEM_SENHA = "Senha incorreta."
 MENSAGEM_SEM_SENHA = (
     "O painel ainda não tem senha. Gere o hash com `python scripts/gerar_hash_professor.py` "
     "e coloque em PROFESSOR_PASSWORD_HASH no .env."
 )
-MENSAGEM_TENTATIVAS = "Muitas tentativas. Espere uns minutos antes de tentar de novo."
-MENSAGEM_EXPIROU = "A página expirou. Recarregue e tente de novo."
 
 
 # ---- Perguntas da roda de conversa -----------------------------------------------------
@@ -70,13 +73,10 @@ def _sessao(request: Request) -> auth.SessaoProfessor | None:
     )
 
 
-async def _formulario(request: Request) -> dict[str, str]:
-    """Lê um formulário urlencoded (sem depender do python-multipart)."""
-    corpo = await request.body()
-    if len(corpo) > TAMANHO_MAXIMO_FORM:
-        raise HTTPException(status_code=413, detail="Formulário grande demais.")
-    campos = parse_qs(corpo.decode("utf-8", errors="replace"), keep_blank_values=True)
-    return {chave: valores[0].strip() for chave, valores in campos.items()}
+_formulario = ler_formulario
+_cookie_seguro = cookie_seguro
+_pagina = pagina_privada
+_ir = ir
 
 
 async def _exigir_sessao(request: Request) -> tuple[auth.SessaoProfessor, dict[str, str]]:
@@ -88,26 +88,6 @@ async def _exigir_sessao(request: Request) -> tuple[auth.SessaoProfessor, dict[s
     if not sessao.csrf_confere(request.app.state.chave, campos.get("csrf")):
         raise HTTPException(status_code=403, detail=MENSAGEM_EXPIROU)
     return sessao, campos
-
-
-def _cookie_seguro(request: Request) -> bool:
-    return request.app.state.settings.app_env == AppEnv.PRODUCTION
-
-
-def _pagina(request: Request, nome: str, status_code: int = 200, **contexto: Any) -> HTMLResponse:
-    resposta = templates.TemplateResponse(
-        request,
-        nome,
-        {"edicao_cnct": request.app.state.edicao_cnct, **contexto},
-        status_code=status_code,
-    )
-    resposta.headers["Cache-Control"] = "no-store"
-    resposta.headers["X-Robots-Tag"] = "noindex, nofollow"
-    return resposta
-
-
-def _ir(caminho: str) -> RedirectResponse:
-    return RedirectResponse(caminho, status_code=303)
 
 
 def padlet_valido(url: str) -> bool:

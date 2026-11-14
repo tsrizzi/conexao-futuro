@@ -65,6 +65,9 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./dev.db"
     secret_key: SecretStr | None = None
     professor_password_hash: SecretStr | None = None
+    # Área do admin (gera os códigos de entrada no site). Sem os dois, o /admin fica fechado.
+    admin_usuario: str | None = None
+    admin_password_hash: SecretStr | None = None
     retencao_dias: int = 60
     cobertura_minima: float = 0.7
     log_conversas: bool = False

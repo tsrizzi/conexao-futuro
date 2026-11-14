@@ -740,3 +740,18 @@ main:focus { outline: none; }
 .entrada { max-width: 30rem; padding-top: 1rem; }
 .form-entrada { margin-top: 1.5rem; }
 .form-entrada .form-label { font-weight: 700; font-size: 1.125rem; }
+
+/* ---- Área do admin ------------------------------------------------------------------ */
+
+.codigo-novo {
+  margin: 1rem 0 2rem; padding: 1rem 1.25rem;
+  background: var(--cf-superficie); border: 2px solid var(--cf-acao); border-radius: 0.75rem;
+}
+.codigo-novo:focus { outline: 3px solid var(--bs-focus-ring-color); outline-offset: 2px; }
+.codigo-novo-titulo { font-weight: 700; margin-bottom: 0.25rem; }
+.codigo-novo-valor { font-size: 2rem; margin: 0 0 0.75rem; user-select: all; overflow-wrap: anywhere; }
+.cartao-codigo form { margin-top: 0.4rem; }
+.situacao { font-weight: 700; }
+.situacao-ativo { color: var(--linha-1); }
+.situacao-agendado { color: var(--cf-acao); }
+.situacao-encerrado, .situacao-revogado { color: var(--cf-tinta-suave); }

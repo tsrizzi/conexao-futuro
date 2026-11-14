@@ -284,7 +284,7 @@ def test_paginas_redirecionam_sem_codigo(catalogo_real, sessoes, rota) -> None: 
         assert resposta.headers["location"] == "/"
 
 
-@pytest.mark.parametrize("rota", ["/privacidade", "/health", "/professor"])
+@pytest.mark.parametrize("rota", ["/privacidade", "/health", "/professor", "/admin"])
 def test_paginas_abertas_sem_codigo(catalogo_real, sessoes, rota) -> None:  # type: ignore[no-untyped-def]
     with cliente(catalogo_real, sessoes) as client:
         assert client.get(rota).status_code == 200
