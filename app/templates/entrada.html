@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block titulo %}Conexão Futuro · Entrar{% endblock %}
+
+{% block conteudo %}
+<section class="entrada" data-entrada>
+  <h1 class="titulo-abertura">Conexão Futuro</h1>
+  <p class="texto-abertura">Converse com uma inteligência artificial e descubra cursos técnicos que combinam com você.</p>
+
+  <form class="form-entrada" data-form-entrada novalidate>
+    <label class="form-label" for="codigo-entrada">Digite o código para usar</label>
+    <div class="d-flex gap-2">
+      <input class="form-control campo-codigo" id="codigo-entrada" name="codigo" required maxlength="20"
+             autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ex.: K7MQ-3XPT">
+      <button class="btn btn-primary" type="submit">Entrar</button>
+    </div>
+    <p class="form-text">O código é passado pelo professor ou pela organização da oficina.</p>
+    <p class="erro-formulario" data-erro role="alert"></p>
+  </form>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/entrada.js"></script>
+{% endblock %}

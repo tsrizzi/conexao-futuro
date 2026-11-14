@@ -734,3 +734,9 @@ main:focus { outline: none; }
 .subtitulo-roda { font-size: 1.05rem; margin: 1rem 0 0.4rem; }
 .perguntas-roda { padding-left: 1.2rem; }
 .perguntas-roda li { margin-bottom: 0.35rem; }
+
+/* ---- Porta de entrada --------------------------------------------------------------- */
+
+.entrada { max-width: 30rem; padding-top: 1rem; }
+.form-entrada { margin-top: 1.5rem; }
+.form-entrada .form-label { font-weight: 700; font-size: 1.125rem; }

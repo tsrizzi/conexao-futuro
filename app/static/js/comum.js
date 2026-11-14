@@ -48,6 +48,16 @@ const CF = (() => {
       .join("");
   }
 
+  // A porta de entrada fechou (código revogado ou fora do período): volta para ela.
+  function portaFechada(resposta) {
+    if (resposta.status === 403 && resposta.headers.get("X-Entrada") === "necessaria") {
+      sessao.limpar();
+      window.location.href = "/?saiu=1";
+      return true;
+    }
+    return false;
+  }
+
   async function erroDaResposta(resposta) {
     try {
       const corpo = await resposta.json();
@@ -65,6 +75,7 @@ const CF = (() => {
       body: JSON.stringify(corpo),
     });
     if (!resposta.ok) {
+      if (portaFechada(resposta)) return new Promise(() => {});  // a página vai trocar
       const erro = new Error(await erroDaResposta(resposta));
       erro.status = resposta.status;
       throw erro;
@@ -105,6 +116,7 @@ const CF = (() => {
       body: JSON.stringify(corpo),
     });
     if (!resposta.ok) {
+      if (portaFechada(resposta)) return new Promise(() => {});  // a página vai trocar
       const erro = new Error(await erroDaResposta(resposta));
       erro.status = resposta.status;
       throw erro;

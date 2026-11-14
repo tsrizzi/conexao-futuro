@@ -259,3 +259,39 @@ def test_sair_apaga_a_liberacao(catalogo_real, sessoes) -> None:  # type: ignore
         client.post("/api/entrada", json={"codigo": codigo})
         assert client.post("/api/saida").status_code == 200
         assert client.post("/api/chat/iniciar", json={}).status_code == 403
+
+
+# ---- A porta na interface --------------------------------------------------------------
+
+
+def test_pagina_inicial_vira_porta(catalogo_real, sessoes) -> None:  # type: ignore[no-untyped-def]
+    with cliente(catalogo_real, sessoes) as fechado:
+        html = fechado.get("/").text
+        assert "Digite o código para usar" in html
+        assert 'id="codigo-entrada"' in html
+        assert "inteligência artificial" in html  # rodapé (regra 4)
+        assert "/privacidade" in html
+        assert "Começar conversa" not in html
+    with cliente(catalogo_real, sessoes, liberado=True) as aberto:
+        assert "Começar conversa" in aberto.get("/").text
+
+
+@pytest.mark.parametrize("rota", ["/chat", "/formulario", "/codigo", "/resultado"])
+def test_paginas_redirecionam_sem_codigo(catalogo_real, sessoes, rota) -> None:  # type: ignore[no-untyped-def]
+    with cliente(catalogo_real, sessoes) as client:
+        resposta = client.get(rota, follow_redirects=False)
+        assert resposta.status_code == 303
+        assert resposta.headers["location"] == "/"
+
+
+@pytest.mark.parametrize("rota", ["/privacidade", "/health", "/professor"])
+def test_paginas_abertas_sem_codigo(catalogo_real, sessoes, rota) -> None:  # type: ignore[no-untyped-def]
+    with cliente(catalogo_real, sessoes) as client:
+        assert client.get(rota).status_code == 200
+
+
+def test_js_trata_saida(client) -> None:  # type: ignore[no-untyped-def]
+    js = client.get("/static/js/comum.js").text
+    assert "X-Entrada" in js and "/?saiu=1" in js
+    entrada = client.get("/static/js/entrada.js").text
+    assert "/api/entrada" in entrada and "saiu" in entrada

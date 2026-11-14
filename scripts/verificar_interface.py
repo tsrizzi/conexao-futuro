@@ -24,6 +24,7 @@ import tempfile
 import threading
 import time
 import urllib.request
+from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
@@ -37,7 +38,7 @@ import websockets  # noqa: E402
 from app.agent.ofertas import Ofertas  # noqa: E402
 from app.agent.orchestrator import Orquestrador  # noqa: E402
 from app.config import Settings  # noqa: E402
-from app.db.models import Base  # noqa: E402
+from app.db.models import Base, agora  # noqa: E402
 from app.db.session import criar_engine, fabrica_de_sessoes  # noqa: E402
 from app.llm.fake import FakeProvider  # noqa: E402
 from app.main import create_app  # noqa: E402
@@ -55,6 +56,7 @@ AXE = "https://cdn.jsdelivr.net/npm/axe-core@4.10.2/axe.min.js"
 SAIDA = RAIZ / ".cache" / "capturas"
 LARGURA, ALTURA = 360, 780
 SENHA_DEMO = "senha-de-demonstracao"
+CODIGO_DEMO: list[str] = []  # preenchido por turma_demo
 
 
 def app_demo() -> Any:
@@ -122,6 +124,11 @@ def turma_demo(sessoes: Any) -> None:
             repositorio.registrar_uso(db, cheia.id, 40_000, 6_000)
         for _ in range(2):
             repositorio.registrar_trilhas(db, pequena.id, [], nova_participacao=True)
+        # Código de entrada válido por um dia, para a passada atravessar a porta.
+        _, codigo = repositorio.criar_codigo_entrada(
+            db, b"d" * 32, "demo", agora() - timedelta(hours=1), agora() + timedelta(days=1)
+        )
+    CODIGO_DEMO.append(codigo)
 
 
 async def percorrer_professor(cdp: "CDP", base: str, tema: str, achados: dict[str, Any]) -> None:
@@ -239,9 +246,20 @@ def mensagens_ia(minimo: int) -> str:
 async def percorrer(cdp: CDP, base: str, tema: str, achados: dict[str, Any]) -> None:
     preferencia = [{"name": "prefers-color-scheme", "value": tema}]
     await cdp("Emulation.setEmulatedMedia", features=preferencia)
+    await cdp("Network.clearBrowserCookies")
     await cdp.abrir(f"{base}/")
     await cdp.js("localStorage.clear(); sessionStorage.clear()")
     await cdp.abrir(f"{base}/")
+    # Porta de entrada: sem código, a página inicial pede o código.
+    await cdp.captura(f"{tema}-0-entrada", inteira=False)
+    await checar(cdp, f"{tema}/entrada", achados)
+    await cdp.js(
+        f"{{ document.querySelector('#codigo-entrada').value = {json.dumps(CODIGO_DEMO[0])}; "
+        "document.querySelector('[data-form-entrada]').requestSubmit(); }"
+    )
+    await cdp.esperar(
+        "document.readyState === 'complete' && document.querySelector('[data-nova-conversa]')"
+    )
     await cdp.captura(f"{tema}-1-inicio")
     await checar(cdp, f"{tema}/inicio", achados)
 
