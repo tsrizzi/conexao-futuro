@@ -186,12 +186,22 @@ O CNCT diz quais cursos existem, mas não onde são ofertados. `ofertas_regiao.j
 - Proteção contra força bruta: limite de 10 tentativas por IP a cada 10 min.
 - Na tela: "Anote seu código! É com ele que você volta pras suas respostas. A gente não pede seu nome."
 
+### 4.5 Código de entrada no site (decidido em 14/11/2026)
+O site não fica aberto: o projeto é um TCC e a API do LLM é paga pelo autor. A página inicial
+pede um **código de entrada** (`XXXX-XXXX`, sem caracteres ambíguos), gerado pelo autor na
+área `/admin` (usuário + senha via `ADMIN_USUARIO` e `ADMIN_PASSWORD_HASH`) com **data de
+início e de término**. Um código serve para várias pessoas (ex.: uma turma inteira) e pode
+ser revogado a qualquer momento; revogar ou terminar o período corta o acesso na próxima
+mensagem. No banco fica só o HMAC, os 4 últimos caracteres e a contagem de usos. Detalhes em
+`docs/superpowers/specs/2026-11-14-acesso-controlado-design.md`.
+
 ---
 
 ## 5. Telas (frontend)
 
 Bootstrap 5, mobile-first, com tema claro e escuro, botões grandes e contraste AA.
 
+0. **Porta de entrada** — sem código de entrada válido (seção 4.5), a página inicial mostra só "Digite o código para usar". As demais telas do estudante voltam para ela.
 1. **Início** — título "Conexão Futuro", uma frase sobre o que é e três botões: "Começar conversa", "Responder o formulário antes" e "Já tenho um código". O código da turma é opcional, num campo discreto. Rodapé com "Você está conversando com uma inteligência artificial", link para o aviso de privacidade e a edição do CNCT.
 2. **Formulário de apoio** — as perguntas de `perguntas.yaml`, uma por tela (estilo cartão), com barra de progresso, botão "pular" em todas e opção de parar e continuar depois. No final, mostra o código de acesso em destaque, com botão de copiar.
 3. **Chat** — balões de mensagem, streaming de texto, **botões de resposta rápida** (chips) quando a pergunta tem opções, além de texto livre. Mostra um indicador de "pensando…" e, no topo, um medidor de progresso da descoberta ("já te conheço uns 60%").

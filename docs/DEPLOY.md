@@ -113,6 +113,32 @@ protege os códigos de acesso no banco; se mudar, os códigos antigos deixam de 
 - `https://SEU-SERVICO.run.app/health` responde `"app_env":"production"` e
   `"llm_provider":"anthropic"`.
 - Abra o site, converse até as trilhas e entre em `/professor` com a senha.
+
+### Área do admin e códigos de entrada
+
+O site só abre com um código de entrada, gerado em `/admin`. Cadastre o usuário e a senha
+do admin no Cloud Shell, um comando por vez (a senha é digitada sem aparecer e só o hash é
+guardado):
+
+```bash
+pip install --quiet --user argon2-cffi
+```
+
+```bash
+read -rp 'Usuário do admin: ' U; printf '%s' "$U" | gcloud secrets create admin-usuario --data-file=-; unset U
+```
+
+```bash
+python3 -c "import getpass;from argon2 import PasswordHasher;s=getpass.getpass('Senha do admin (12+ caracteres): ');assert len(s)>=12,'senha curta';print(PasswordHasher().hash(s),end='')" | gcloud secrets create admin-password-hash --data-file=-
+```
+
+```bash
+gcloud run services update conexao-futuro --region=REGIAO --update-secrets=ADMIN_USUARIO=admin-usuario:latest,ADMIN_PASSWORD_HASH=admin-password-hash:latest
+```
+
+Depois entre em `https://SEU-SERVICO.run.app/admin`, crie um código (rótulo, início e
+término no horário de Brasília) e **anote-o na hora**: ele aparece inteiro só uma vez. Passe
+o código para a turma ou para os colegas do piloto. Para cortar o acesso, use **Revogar**.
 - Se não subir: **Cloud Run → serviço → Registros**. Os erros comuns têm mensagem clara
   (`SECRET_KEY` curta, Gemini em produção, banco inacessível).
 

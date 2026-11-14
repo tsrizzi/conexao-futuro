@@ -86,6 +86,14 @@ para a roda de conversa (`data/roda_conversa.yaml`, editável) e o custo estimad
 com menos de `PAINEL_MINIMO_DETALHE` (5) participantes mostram só a contagem. Os eventos não
 têm nenhuma ligação com o estudante.
 
+## Código de entrada e área do admin
+
+O site só abre com um **código de entrada** (`XXXX-XXXX`). O autor gera os códigos em `/admin`,
+com data de início e de término, e pode revogá-los. Configure `ADMIN_USUARIO` e
+`ADMIN_PASSWORD_HASH` (hash gerado com `scripts/gerar_hash_professor.py`); sem eles o `/admin`
+fica fechado. Para testar localmente, entre em `/admin`, crie um código e use-o na página
+inicial.
+
 ## Deploy
 
 Google Cloud Run (imagem do `Dockerfile`, deploy a cada push no `main`) com Postgres no Neon.

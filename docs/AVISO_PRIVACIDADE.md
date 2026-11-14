@@ -14,6 +14,7 @@ Este aviso explica, em linguagem simples, o que o Conexão Futuro faz com o que 
 
 ## O que fica guardado
 
+- Para entrar no site você digita um **código de entrada**, passado pelo professor ou pela organização da oficina. Ele é o mesmo para várias pessoas e não identifica você: o sistema guarda só quantas vezes cada código foi usado, não quem usou.
 - **O texto da conversa não é guardado no servidor.** Ele fica só no seu navegador, e some quando você fecha a aba.
 - Se você usar o formulário de apoio, recebe um **código** (ex.: ONDA-4827). Com ele ficam guardados só as suas respostas do formulário, um resumo do seu perfil (como "curte desenhar") e os cursos sugeridos. Nada disso identifica você.
 - Para o painel da turma, o professor vê só números da turma inteira (por exemplo, quantas pessoas receberam sugestões de cada área). Ninguém vê as respostas de um estudante.
